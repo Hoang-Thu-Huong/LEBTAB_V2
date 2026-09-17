@@ -1,4 +1,4 @@
-# Environment variables
+# Environment
 .env
 .env.local
 .env.*.local
@@ -6,42 +6,26 @@
 # Node.js
 node_modules/
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-yarn.lock
+*.log
 
-# XAMPP / MySQL
+# Lebensmittelfotos (UPLOAD_DIR) — echte Bilder werden nicht getrackt, nur die Beispielbilder (docs/DATA.md 4.0). 
+backend/uploads/
+
+# Excel files (docs/DATA.md 4.0)
+Excel/
+
+# Backup DB (scripts/backup.ps1)
+backups/
 *.sql.bak
-data/
-mysql/
-phpmyadmin/
+backup_*.sql
 
-# IDE / Editor
+# IDE / OS
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
 .DS_Store
-
-# Build output
-dist/
-.nuxt/
-.vuepress/dist/
-
-# Vite
-.vite/
-
-# OS
 Thumbs.db
-.DS_Store
 
-# Local development
-*.log
+# Temp
 tmp/
 temp/
-
-# Architecture documentation (versioning)
-# Keep these tracked - they're important!
-# docs/*.md - DO NOT EXCLUDE

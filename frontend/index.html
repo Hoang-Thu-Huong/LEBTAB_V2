@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LEBTAB — Produkte</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="topbar__title">LEBTAB Eingabemaske</h1>
+    <nav class="topbar__nav">
+      <a href="index.html" class="topbar__link topbar__link--active">Produkte</a>
+    </nav>
+  </header>
+
+  <main id="page" class="page">
+    <section class="toolbar">
+      <span id="result-count" class="toolbar__count"></span>
+    </section>
+    <div id="message" class="message" hidden></div>
+    <section id="products" class="table-wrap"></section>
+    <section id="pagination" class="pagination"></section>
+  </main>
+
+  <script type="module" src="js/pages/list.js"></script>
+</body>
+</html>

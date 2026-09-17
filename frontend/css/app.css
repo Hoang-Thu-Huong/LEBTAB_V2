@@ -1,0 +1,64 @@
+/* LEBTAB_V2 — app.css (docs/ARCHITECTURE.md 3.3, 8.2). BEM-lite, CSS-Variablen, kein Framework. */
+:root {
+  --color-bg: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-text: #1f2328;
+  --color-muted: #6b7280;
+  --color-border: #d0d7de;
+  --color-primary: #1f6feb;
+  --color-primary-text: #ffffff;
+  --color-danger: #c62828;
+  --color-danger-bg: #fdecea;
+  --color-success: #1b7f3b;
+  --color-success-bg: #e6f4ea;
+  --color-warn-bg: #fff4d6;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius: 6px;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: var(--font); font-size: 14px; color: var(--color-text); background: var(--color-bg); }
+a { color: var(--color-primary); }
+
+.topbar { display: flex; align-items: center; gap: var(--space-6); padding: var(--space-3) var(--space-6); background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.topbar__title { margin: 0; font-size: 18px; }
+.topbar__nav { display: flex; gap: var(--space-4); }
+.topbar__link { text-decoration: none; padding: var(--space-1) var(--space-2); border-radius: var(--radius); }
+.topbar__link--active { background: var(--color-primary); color: var(--color-primary-text); }
+
+.page { max-width: 1200px; margin: 0 auto; padding: var(--space-6); }
+.toolbar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.toolbar__count { color: var(--color-muted); }
+
+.message { padding: var(--space-3) var(--space-4); border-radius: var(--radius); margin-bottom: var(--space-3); border: 1px solid transparent; }
+.message--loading { background: var(--color-surface); color: var(--color-muted); border-color: var(--color-border); }
+.message--error { background: var(--color-danger-bg); color: var(--color-danger); border-color: var(--color-danger); }
+.message--success { background: var(--color-success-bg); color: var(--color-success); border-color: var(--color-success); }
+
+.table-wrap { overflow-x: auto; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-border); text-align: left; white-space: nowrap; }
+.table th { position: sticky; top: 0; background: var(--color-surface); font-weight: 600; }
+.table__row--clickable { cursor: pointer; }
+.table__row--clickable:hover { background: var(--color-bg); }
+.table__empty { padding: var(--space-6); text-align: center; color: var(--color-muted); }
+.code { font-family: var(--font-mono); }
+.tag { display: inline-block; padding: 0 var(--space-2); border: 1px solid var(--color-border); border-radius: 999px; font-size: 12px; }
+
+.pagination { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
+.pagination__info { color: var(--color-muted); }
+
+.btn { font: inherit; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; }
+.btn:disabled, .btn.is-busy { opacity: 0.5; cursor: default; }
+.btn--primary { background: var(--color-primary); color: var(--color-primary-text); border-color: var(--color-primary); }
+.btn--danger { background: var(--color-danger); color: #fff; border-color: var(--color-danger); }
+
+.is-invalid { border-color: var(--color-danger) !important; background: var(--color-danger-bg); }
+.sum-warn { color: var(--color-danger); font-weight: 700; }

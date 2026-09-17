@@ -1,220 +1,81 @@
-# Lebensmittel-Produktverwaltungssystem (Lebtab)
+# LEBTAB_V2 — Eingabemaske für `lebtab` / `c_zutab`
 
-**Ein modernes Web-Anwendungssystem zur Verwaltung von Lebensmittelprodukten mit Nährstoffberechnung für deutschsprachiges Personal.**
+Interne Web-Anwendung zum Anzeigen, Anlegen, Bearbeiten und Archivieren von Lebensmittelprodukten
+(92 Spalten, davon 79 Nährwerte) und ihren Rezepturen (`c_zutab`), inkl. Produktfotos und CSV-Export.
 
----
+## Dokumentation (Quelle der Wahrheit)
 
-## 📋 Überblick
+| Frage | Datei |
+|---|---|
+| Was muss die App tun? Business-Regeln, API-Vertrag, Fehlercodes | [`docs/SPEC.md`](docs/SPEC.md) |
+| Welche Daten, welche Invarianten schützen sie? Schema, Archiv, Migrationen | [`docs/DATA.md`](docs/DATA.md) |
+| Wie ist der Code aufgebaut? Schichten, Frontend-Regeln, Tests | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| Warum wurde so entschieden? | [`docs/DECISIONS.md`](docs/DECISIONS.md) |
+| Betrieb, Migrationen ausführen, Backup, Roadmap | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
 
-Dieses Projekt ersetzt direkten Datenbankzugriff durch eine benutzerfreundliche Web-Anwendung für etwa 10 gleichzeitige Benutzer. Das System verwaltet:
+Bei Widersprüchen gilt: `DATA.md` > `SPEC.md` > `ARCHITECTURE.md`.
 
-- **~20.315 Lebensmittelprodukte** mit 92 Spalten (Nährstoffdaten)
-- **~236.962 Zutaten** (Ingredienzen-Zuordnungen)
-- **Nährstoffberechnung** basierend auf Zutatenformeln
-- **Soft-Delete & Archivierung** für Datenschutz
-- **Versionskontrolle** durch optimistic locking
+## Tech Stack
 
----
+| Schicht | Technologie |
+|---|---|
+| Backend | Node.js ≥ 18, Express 5 (ESM), `mysql2/promise`, `dotenv`, `multer` |
+| Frontend | HTML5 + CSS3 + Vanilla JavaScript (ES-Module) — kein Framework, kein Bundler, kein CDN |
+| Datenbank | MariaDB 10.4 (XAMPP), Datenbank `lebtab_new` |
+| Tests | Vitest (Unit) + supertest (Contract) |
 
-## 🛠️ Tech Stack
+Ein Prozess: Express liefert `/api/*`, das statische `frontend/` und `/uploads`.
 
-| Layer | Technologie |
-|-------|------------|
-| **Frontend** | Vue 3 + Vite (JavaScript) |
-| **Backend** | Node.js + Express |
-| **Datenbank** | MySQL (XAMPP lokal) |
-| **VPN** | Für remote Zugriff |
-
----
-
-## 📁 Projektstruktur
+## Projektstruktur
 
 ```
-lebtab-management/
-├── docs/                          # 7 Architektur-Dokumente (höchste Priorität: context.md)
-├── backend/                       # Express.js Server
-│   ├── src/
-│   │   ├── routes/               # API-Endpoints
-│   │   ├── services/             # Business-Logik
-│   │   └── utils/
-│   │       ├── exportColumns.js   # Spalten-Export-Template
-│   │       └── nutritionColumns.js # Nährstoff-Spalten (single source of truth)
-│   ├── package.json
-│   └── .env.example
-├── frontend/                      # Vue 3 + Vite SPA
-│   ├── src/
-│   │   ├── components/
-│   │   ├── views/
-│   │   └── App.vue
-│   └── package.json
+LEBTAB_V2/
+├── backend/          # Express-Server (server.js, src/{config,routes,controllers,services,models,middlewares,utils})
+├── frontend/         # index.html, detail.html, create.html, edit.html, archive.html, css/, js/
 ├── db/
-│   └── migrations/               # SQL Migrationen
-│       ├── 001_alter_lebtab.sql
-│       └── 002_create_archive_tables.sql
-└── README.md (you are here)
+│   ├── schema/       # Original-DDL (Referenz, nicht ausführen)
+│   └── migrations/   # 001 technische Spalten, 002 Archiv-Tabellen, 003 Indizes — manuell ausführen
+├── SQL/              # Original-DDL wie vom Projektinhaber geliefert
+├── Excel/            # Beispieldaten (nicht im Git)
+├── scripts/          # backup.ps1 (mysqldump + uploads), check-schema.sql
+└── docs/             # SPEC, DATA, ARCHITECTURE, DECISIONS, OPERATIONS, legacy/, superpowers/plans
 ```
 
----
+## Einrichtung (Entwicklung)
 
-## ⚙️ Installation & Setup
+Voraussetzungen: Node.js ≥ 18, XAMPP mit laufender MariaDB, Datenbank `lebtab_new` mit importierten
+Tabellen `lebtab` und `c_zutab`.
 
-### Voraussetzungen
-- **Node.js** v16+
-- **XAMPP** (MySQL)
-- **Git**
-
-### Schritt 1: Repository klonen
-```bash
-git clone https://github.com/yourusername/lebtab-management.git
-cd lebtab-management
-```
-
-### Schritt 2: Backend-Setup
 ```bash
 cd backend
 npm install
-cp .env.example .env
-# Bearbeite .env mit MySQL-Anmeldedaten
-npm start
+copy .env.example .env      # Windows; Werte anpassen (DB_PASSWORD, PORT, UPLOAD_DIR)
+npm run dev                 # node --watch server.js → http://localhost:3000
+npm test                    # Vitest + supertest
 ```
 
-### Schritt 3: Frontend-Setup
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
+## Datenbank-Migrationen (manuell, in dieser Reihenfolge)
 
-### Schritt 4: Datenbank-Migrationen (manuell in phpMyAdmin)
-```sql
--- Führe diese Dateien in dieser Reihenfolge aus:
--- db/migrations/001_alter_lebtab.sql
--- db/migrations/002_create_archive_tables.sql
-```
+Vorher Backup: `powershell -File scripts/backup.ps1` (oder `mysqldump -u root lebtab_new > backup_YYYY-MM-DD.sql`)
 
----
+1. `db/migrations/001_add_technical_columns.sql`
+2. `db/migrations/002_create_archive_tables.sql`
+3. `db/migrations/003_add_indexes.sql` (optional)
 
-## 📖 Dokumentation
+Details und Prüfbefehle: `db/README.md`. Alle Migrationen fügen nur hinzu (`ADD`), keine bestehende Spalte
+wird geändert oder gelöscht (`docs/DATA.md` 4.0, `docs/OPERATIONS.md` 4.6). Ohne Migration laufen: Health,
+Produktliste, Produktdetails, Meta, Fotos, CSV-Export. Anlegen/Bearbeiten/Löschen benötigen 001 (+002).
 
-**Lese diese Dateien in dieser Priorität:**
+## Kritische Regeln (Kurzfassung — Details in `docs/SPEC.md`, `docs/DATA.md`)
 
-1. **docs/context.md** ← Höchste Priorität (Quelle der Wahrheit)
-2. docs/project-scope.md
-3. docs/spec_boundaries.md
-4. docs/database-architecture.md
-5. docs/backend-architecture.md
-6. docs/frontend-architecture.md
-7. docs/api-routes-architecture.md
+- Originaldaten in `lebtab`/`c_zutab` werden nie hart gelöscht; Löschen = Archiv + Wiederherstellung (4.0, 5.5).
+- Jedes Löschen, Wiederherstellen und Neuberechnen der Nährwerte fragt den Benutzer per Dialog (5.9).
+- Nährwerte werden nur bei `POST /api/products` (Anlegen) und `POST /:lmc/recalculate` berechnet; Zutaten-Endpunkte setzen nur `lebtab_nutrition_stale = 1` (5.2).
+- Zutat mit `Itemart = 'A'` geht nicht in die Berechnung und nicht in die 100-g-Summe ein (5.1).
+- CSV-Export nutzt immer `LEBTAB_EXPORT_COLUMNS` (92 Spalten), nie `SELECT *` (8.1).
+- Zahlen werden unverändert angezeigt, nicht gerundet (7.7).
 
----
 
-## 🚀 Entwicklungs-Phasen
+## Git-Workflow
 
-### Phase 1: Walking Skeleton ✅ (Geplant)
-- `GET /api/products` (fixed LIMIT 20)
-- Einfache Produkt-Listansicht
-
-### Phase 2: Produkt-CRUD
-- `POST /api/products` (Produkt erstellen)
-- `PUT /api/products/:lmc` (Bearbeiten mit optimistic locking)
-- `DELETE /api/products/:lmc` (Soft-Delete)
-
-### Phase 3: Zutat-Management
-- `POST /api/products/:lmc/ingredients` (Zutat hinzufügen)
-- `PUT /api/products/:lmc/ingredients/:id` (Bearbeiten)
-- `DELETE /api/products/:lmc/ingredients/:id` (Löschen)
-
-### Phase 4: Nährstoffberechnung
-- `POST /api/products/:lmc/recalculate` (Explizite Neuberechnung)
-- `lebtab_nutrition_stale` Flag-Verwaltung
-
-### Phase 5: Archivierung & Export
-- Archive/Restore Endpoints
-- CSV-Export mit Spalten-Template
-
----
-
-## ⚠️ Kritische Business-Regeln
-
-> Diese Regeln müssen von allen Entwicklern beachtet werden!
-
-### Nährstoffberechnung
-- `recalculateNutrition()` wird **NIEMALS** von Zutat-Endpoints aufgerufen
-- Nur `POST /:lmc/recalculate` triggert Neuberechnung
-- Zutaten-Endpoints setzen nur `lebtab_nutrition_stale = 1`
-
-### Duplikat-Erkennung (Zutaten)
-- **Warnung, kein Fehler!** HTTP 200 + `warning` Feld
-- Client kann mit `confirmDuplicate: true` erneut submitten
-
-### 100g-Menge-Check
-- **Nur Frontend-Display** (rote Warnung wenn ≠ 100g)
-- Keine Backend-Validierung, nicht blockierend
-
-### Vitamin/Spezial-Komponenten
-- `itemart = 'A'` wird **ausgeschlossen** aus 100g-Summe
-- Aber **gespeichert und angezeigt**
-- IngredientPicker: Filter nach `itemart = 'L' OR itemart = 'A'`
-
-### Optimistic Locking
-- Nur `PUT /:lmc` und `POST /:lmc/recalculate`
-- Nutze `_row_version` Spalte
-
-### CSV-Export
-- Verwende **IMMER** `LEBTAB_EXPORT_COLUMNS` aus `backend/src/utils/exportColumns.js`
-- Niemals `SELECT *` (würde technische Spalten exportieren)
-
----
-
-## 🔑 Sprachkonventionen
-
-| Context | Sprache | Beispiel |
-|---------|---------|----------|
-| Chat (AI) | Vietnamesisch | `tôi muốn...` |
-| Code & Variablen | Deutsch/English | `lebtab`, `c_zutab`, `recalculateNutrition` |
-| Kommentare | Deutsch/English | `// Nährstoff-Spalten werden hier geladen` |
-| API Error Messages | Deutsch | `"Die Produktnummer existiert bereits"` |
-| Error Codes | English | `LMC_ALREADY_EXISTS` |
-| User-Facing UI | Deutsch | Buttons, Labels, etc. |
-
----
-
-## 🐛 Bekannte Probleme
-
-- [ ] Vietnamesisches Fehler-Message-Beispiel in `backend-architecture.md` → muss zu Deutsch konvertiert werden
-- [ ] Ausstehende DB-Migrationen (müssen vor Phase 2+ manuell in phpMyAdmin ausgeführt werden)
-
----
-
-## 🤝 Contribution Guide
-
-### Für neue Features:
-1. Branch von `develop` erstellen: `git checkout -b feature/feature-name`
-2. Architecture Docs **zuerst** konsultieren
-3. Code schreiben, testen
-4. Pull Request zu `develop` mit Beschreibung
-5. Code Review vor Merge
-
-### Commits:
-```bash
-git commit -m "feat: implement ingredient CRUD endpoints"
-git commit -m "docs: update API routes in architecture"
-git commit -m "db: add migration for archive tables"
-```
-
----
-
-## 📞 Support & Kontakt
-
-Bei Fragen → konsultiere zuerst `docs/context.md`!
-
----
-
-## 📄 Lizenz
-
-[Wähle eine: MIT, GPL, Proprietary, etc.]
-
----
-
-**Letztes Update:** [Datum]  
-**Status:** Early Development (Walking Skeleton Phase)
+Siehe `docs/GITHUB-WORKFLOW.md` (Branches `feature/*` von `develop`, Conventional Commits).
