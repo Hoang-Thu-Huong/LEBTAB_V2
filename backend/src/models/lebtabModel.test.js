@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { escapeLike, findPage, count, findByLmc, exists } from './lebtabModel.js';
+import { escapeLike, findPage, count, findByLmc, exists, findNutritionByLmcs } from './lebtabModel.js';
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
 
 const fakeConn = (rows) => ({ query: vi.fn().mockResolvedValue([rows]) });
@@ -72,5 +72,32 @@ describe('exists', () => {
     const conn = fakeConn([]);
     expect(await exists('ZZZZZZ', conn)).toBe(false);
     expect(sqlOf(conn)).toBe('SELECT 1 AS found FROM lebtab WHERE lebtab_lmc = ? LIMIT 1');
+  });
+});
+
+describe('findNutritionByLmcs', () => {
+  it('reads code, Itemart and the 79 nutrition columns with one IN (?) query, never SELECT *', async () => {
+    const conn = fakeConn([{ lebtab_lmc: 'AFB000' }, { lebtab_lmc: 'JVB100' }]);
+    const rows = await findNutritionByLmcs(['AFB000', 'JVB100'], conn);
+    expect(rows).toEqual([{ lebtab_lmc: 'AFB000' }, { lebtab_lmc: 'JVB100' }]);
+    expect(conn.query).toHaveBeenCalledTimes(1);
+    expect(sqlOf(conn)).toBe(
+      `SELECT lebtab_lmc, lebtab_Itemart, ${NUTRITION_COLUMNS.join(', ')} FROM lebtab WHERE lebtab_lmc IN (?)`,
+    );
+    expect(sqlOf(conn)).not.toContain('*');
+    expect(paramsOf(conn)).toEqual([['AFB000', 'JVB100']]);
+  });
+
+  it('selects exactly 81 columns: no basic, classification or technical column besides lmc and Itemart', async () => {
+    const conn = fakeConn([]);
+    await findNutritionByLmcs(['AFB000'], conn);
+    const selected = sqlOf(conn).slice('SELECT '.length, sqlOf(conn).indexOf(' FROM ')).split(', ');
+    expect(selected).toEqual(['lebtab_lmc', 'lebtab_Itemart', ...NUTRITION_COLUMNS]);
+  });
+
+  it('sends no query for an empty list', async () => {
+    const conn = fakeConn([]);
+    expect(await findNutritionByLmcs([], conn)).toEqual([]);
+    expect(conn.query).not.toHaveBeenCalled();
   });
 });

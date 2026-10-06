@@ -105,3 +105,20 @@ export async function exists(lmc, conn) {
   const [rows] = await conn.query('SELECT 1 AS found FROM lebtab WHERE lebtab_lmc = ? LIMIT 1', [lmc]);
   return rows.length > 0;
 }
+
+/**
+ * Naehrwert-Zeilen mehrerer Codes mit EINER Abfrage (kein N+1) — fuer calculateNutrition (docs/SPEC.md 5.1).
+ * Liefert auch die Zusatz-Codes (Itemart A): ihre Zeile ist der Marker-Vektor. Kollation _ci: 'afb000' trifft 'AFB000';
+ * lebtab_lmc kommt so zurueck, wie es in der DB steht. Leere Liste -> keine Abfrage.
+ * @param {string[]} lmcs
+ * @param {import('mysql2/promise').Pool | import('mysql2/promise').PoolConnection} conn
+ * @returns {Promise<Array<Record<string, unknown>>>} je Zeile lebtab_lmc, lebtab_Itemart und die 79 Naehrwertspalten
+ */
+export async function findNutritionByLmcs(lmcs, conn) {
+  if (lmcs.length === 0) return [];
+  const [rows] = await conn.query(
+    `SELECT lebtab_lmc, lebtab_Itemart, ${NUTRITION_COLUMNS.join(', ')} FROM lebtab WHERE lebtab_lmc IN (?)`,
+    [lmcs],
+  );
+  return rows;
+}
