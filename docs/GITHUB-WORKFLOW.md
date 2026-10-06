@@ -18,18 +18,20 @@ main (Production)
 
 ### Format
 ```
-[TYPE]: [SHORT DESCRIPTION] (#ISSUE_NUMBER)
+type(scope): kurze beschreibung
 
 Längere Beschreibung hier bei Bedarf.
 ```
+
+`scope` ist optional (`backend`, `frontend`, `db` …). Eine Issue-Nummer `(#12)` nur anhängen, wenn es ein Issue gibt.
 
 ### Typen
 
 | Typ | Beschreibung | Beispiel |
 |-----|-------------|----------|
-| `feat:` | Neue Funktionalität | `feat: implement GET /api/products (#12)` |
-| `fix:` | Bugfix | `fix: correct error message in login` |
-| `docs:` | Dokumentation | `docs: update architecture.md` |
+| `feat:` | Neue Funktionalität | `feat(backend): add GET /api/meta` |
+| `fix:` | Bugfix | `fix(frontend): dim the previous list result while the latest request failed` |
+| `docs:` | Dokumentation (nur Dateien im Repository, z. B. `README.md`) | `docs: update setup section in README` |
 | `db:` | Datenbankänderungen | `db: add migration for row_version` |
 | `refactor:` | Code-Umstrukturierung | `refactor: simplify nutrition calculation` |
 | `test:` | Tests hinzufügen/ändern | `test: add unit tests for exportColumns` |
@@ -39,9 +41,9 @@ Längere Beschreibung hier bei Bedarf.
 
 ```bash
 # ✅ Gut
-git commit -m "feat: add ingredient duplicate warning dialog (#23)"
+git commit -m "feat(frontend): add ingredient duplicate warning dialog"
 git commit -m "db: create migration for archive tables"
-git commit -m "docs: clarify optimistic locking in backend-architecture"
+git commit -m "docs: clarify migration order in README"
 
 # ❌ Vermeiden
 git commit -m "bugfix"
@@ -86,14 +88,14 @@ git checkout -b feature/walking-skeleton
 ### 2. Code schreiben (öfter committen!)
 ```bash
 # Einen logischen Schritt nach dem anderen
-git add backend/src/routes/products.js
-git commit -m "feat: add GET /api/products endpoint"
+git add backend/src/routes/productRoutes.js
+git commit -m "feat(backend): add GET /api/products endpoint"
 
-git add frontend/src/views/ProductList.vue
-git commit -m "feat: create product list view"
+git add frontend/js/pages/list.js
+git commit -m "feat(frontend): create product list page"
 
-git add docs/api-routes-architecture.md
-git commit -m "docs: document new GET endpoint"
+git add README.md
+git commit -m "docs: document new GET endpoint in README"
 ```
 
 ### 3. Mit develop synchronisieren
@@ -169,7 +171,7 @@ Kurze Zusammenfassung, was implementiert werden soll.
 
 ## 📚 Referenzen
 
-- Architecture: docs/backend-architecture.md
+- Doku: README.md
 - Related: #15, #18
 ```
 
@@ -186,7 +188,7 @@ Kurze Zusammenfassung, was implementiert werden soll.
 Vor dem Merge prüfen:
 
 - [ ] Code folgt Sprachkonventionen (Deutsch/English, keine Vietnamesisch)
-- [ ] Architecture Docs wurden konsultiert (context.md hat Vorrang!)
+- [ ] Projektdoku wurde konsultiert (bei Widersprüchen gilt: `DATA.md` > `SPEC.md` > `ARCHITECTURE.md`)
 - [ ] Business-Regeln sind befolgt (z.B. recalculateNutrition nicht von Zutat-Endpoints)
 - [ ] Keine hart-codierten Umgebungsvariablen
 - [ ] .env-Änderungen sind in .env.example dokumentiert
@@ -198,6 +200,8 @@ Vor dem Merge prüfen:
 ## 📊 Monitoring
 
 ### GitHub Actions (Optional - Zukünftig)
+
+CI/Lint: noch nicht eingerichtet. Es gibt kein `npm run lint`; die Tests laufen lokal mit `cd backend && npm test`. Das folgende Beispiel ist nur ein Entwurf.
 
 ```yaml
 # .github/workflows/ci.yml
@@ -237,7 +241,7 @@ git push origin v0.1.0
 2. **Kleine Branches**: Feature sollte 1-3 Tage dauern
 3. **Früh pushen**: Zeige Fortschritt im PR, frag nach Feedback
 4. **Lokal testen**: Vor Push immer `npm run dev` & testen
-5. **Docs nicht vergessen**: Architecture Docs bei Feature-Änderungen updaten
+5. **Docs nicht vergessen**: `README.md` bei Feature-Änderungen aktualisieren. Die Projektdoku unter `docs/` (SPEC, DATA, ARCHITECTURE, DECISIONS, OPERATIONS) liegt nur lokal beim Projektinhaber und ist – außer dieser Datei – nicht im Repository
 
 ---
 

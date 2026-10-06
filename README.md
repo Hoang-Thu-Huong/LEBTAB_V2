@@ -71,7 +71,7 @@ Produktliste, Produktdetails, Meta, Fotos, CSV-Export. Anlegen/Bearbeiten/Lösch
 - Originaldaten in `lebtab`/`c_zutab` werden nie hart gelöscht; Löschen = Archiv + Wiederherstellung (4.0, 5.5).
 - Jedes Löschen, Wiederherstellen und Neuberechnen der Nährwerte fragt den Benutzer per Dialog (5.9).
 - Nährwerte werden nur bei `POST /api/products` (Anlegen) und `POST /:lmc/recalculate` berechnet; Zutaten-Endpunkte setzen nur `lebtab_nutrition_stale = 1` (5.2).
-- Zutat mit `Itemart = 'A'` geht nicht in die Berechnung und nicht in die 100-g-Summe ein (5.1).
+- Zutaten mit `Itemart = 'A'` sind Zusätze: `Menge × Marker` ersetzt den berechneten Wert der markierten Spalten und zählt nicht zur 100-g-Summe. Zeilen mit `Menge = 0` gehen nicht in die Berechnung ein (5.1).
 - CSV-Export nutzt immer `LEBTAB_EXPORT_COLUMNS` (92 Spalten), nie `SELECT *` (8.1).
 - Zahlen werden unverändert angezeigt, nicht gerundet (7.7).
 
