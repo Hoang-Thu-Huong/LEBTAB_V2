@@ -15,7 +15,7 @@ export function renderProductTable(container, { items }, { onSelect } = {}) {
   const rows = items
     .map(
       (p) => `<tr class="table__row table__row--clickable" data-lmc="${escapeHtml(p.lebtab_lmc)}">
-        <td class="code">${escapeHtml(p.lebtab_lmc)}</td>
+        <td><a class="link code" href="detail.html?lmc=${escapeHtml(encodeURIComponent(p.lebtab_lmc))}">${escapeHtml(p.lebtab_lmc)}</a></td>
         <td>${escapeHtml(p.lebtab_Bezeich)}</td>
         <td><span class="tag">${escapeHtml(p.lebtab_Itemart)}</span></td>
         <td>${escapeHtml(formatDate(p.lebtab_Datum))}</td>
@@ -28,6 +28,7 @@ export function renderProductTable(container, { items }, { onSelect } = {}) {
   </table>`;
 
   container.onclick = (ev) => {
+    if (ev.target.closest('a')) return; // echter Link: Browser navigiert selbst (Strg-/Mittelklick = neuer Tab)
     const row = ev.target.closest('tr[data-lmc]');
     if (row && onSelect) onSelect(row.dataset.lmc);
   };

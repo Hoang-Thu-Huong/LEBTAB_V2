@@ -1,10 +1,13 @@
 import { AppError } from '../utils/AppError.js';
 import { logger } from '../utils/logger.js';
 
-/** mysql2-Fehlercodes, die "Datenbank nicht erreichbar" bedeuten (docs/SPEC.md 6.2 DB_UNAVAILABLE). */
+/** mysql2-/Netzwerk-Fehlercodes, die "Datenbank nicht erreichbar" bedeuten (docs/SPEC.md 6.2 DB_UNAVAILABLE). */
 const DB_DOWN_CODES = new Set([
   'ECONNREFUSED',
   'ETIMEDOUT',
+  'ECONNRESET',
+  'EPIPE',
+  'ENOTFOUND',
   'PROTOCOL_CONNECTION_LOST',
   'ER_ACCESS_DENIED_ERROR',
   'ER_BAD_DB_ERROR',
@@ -30,6 +33,12 @@ export function errorHandler(err, req, res, _next) {
   }
   if (err && err.type === 'entity.parse.failed') {
     send(res, 400, 'VALIDATION_ERROR', 'Ungültiges JSON im Request-Body');
+    return;
+  }
+  // Express-Router: Pfad mit kaputter %-Kodierung (/api/products/%E0%A4%A) -> URIError mit status 400, BEVOR ein
+  // Controller laeuft. Kein Serverfehler: wie eine unbekannte Route beantworten, nicht loggen (DECISIONS #68).
+  if (err instanceof URIError && err.status === 400) {
+    send(res, 404, 'NOT_FOUND', 'Endpunkt nicht gefunden');
     return;
   }
   if (err && DB_DOWN_CODES.has(err.code)) {

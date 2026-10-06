@@ -4,16 +4,25 @@
  */
 const BASE_URL = '/api';
 
+function networkError() {
+  return { status: 0, code: 'NETWORK_ERROR', message: 'Server nicht erreichbar', details: [], current: null };
+}
+
 async function request(method, path, body) {
   const isForm = body instanceof FormData;
-  const res = await fetch(BASE_URL + path, {
-    method,
-    headers: {
-      Accept: 'application/json',
-      ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: isForm ? body : body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(BASE_URL + path, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: isForm ? body : body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw networkError(); // Server aus / VPN getrennt: fetch wirft TypeError mit englischem Text
+  }
   if (!res.ok) {
     let payload = null;
     try {
@@ -58,9 +67,26 @@ export const api = {
     request('DELETE', `/products/${enc(lmc)}/photos/${enc(filename)}`),
   getArchive: (type, page = 1) => request('GET', `/archive?type=${type}&page=${page}`),
   restore: (type, id) => request('POST', `/archive/restore/${type}/${id}`),
-  // #2b — einzige Ausnahme ohne request(): HEAD hat keinen Body.
-  productExists: async (lmc) =>
-    (await fetch(`${BASE_URL}/products/${enc(lmc)}`, { method: 'HEAD' })).ok,
+  // #2b — einzige Ausnahme ohne request(): HEAD hat keinen Body. 404 = frei, 2xx = vergeben,
+  // alles andere ist ein FEHLER (503 darf nie als "existiert nicht" gelesen werden).
+  productExists: async (lmc) => {
+    let res;
+    try {
+      res = await fetch(`${BASE_URL}/products/${enc(lmc)}`, { method: 'HEAD' });
+    } catch {
+      throw networkError();
+    }
+    if (res.ok) return true;
+    if (res.status === 404) return false;
+    const dbDown = res.status === 503;
+    throw {
+      status: res.status,
+      code: dbDown ? 'DB_UNAVAILABLE' : 'NETWORK_ERROR',
+      message: dbDown ? 'Datenbank nicht erreichbar' : 'Server nicht erreichbar',
+      details: [],
+      current: null,
+    };
+  },
   // #13 — Cache pro Browser-Sitzung; Meta aendert sich nur beim Deploy (Itemart-Liste ist fest, DECISIONS #36).
   getMeta: async () => {
     try {

@@ -1,7 +1,6 @@
 import { pool } from './db.js';
 import { logger } from '../utils/logger.js';
-
-const TECHNICAL_COLUMNS = ['_row_version', 'lebtab_nutrition_stale', 'lebtab_bemerkung'];
+import { TECHNICAL_COLUMNS } from '../utils/productColumns.js';
 
 /** @type {{technicalColumns: boolean, archive: boolean} | null} */
 let cached = null;
