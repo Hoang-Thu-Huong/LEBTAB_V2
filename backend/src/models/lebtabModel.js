@@ -122,3 +122,17 @@ export async function findNutritionByLmcs(lmcs, conn) {
   );
   return rows;
 }
+
+/**
+ * Produktnummer so, wie sie in der DB steht (Kollation _ci: 'a1ck00' trifft 'A1CK00') — fuer den Fotoordner
+ * (docs/SPEC.md 5.8). Laedt bewusst nur diese eine Spalte.
+ * @param {string} lmc
+ * @param {import('mysql2/promise').Pool | import('mysql2/promise').PoolConnection} conn
+ * @returns {Promise<string | null>} null, wenn das Produkt nicht existiert
+ */
+export async function findStoredLmc(lmc, conn) {
+  const [rows] = await conn.query('SELECT lebtab_lmc FROM lebtab WHERE lebtab_lmc = ? LIMIT 1', [
+    lmc,
+  ]);
+  return rows.length > 0 ? rows[0].lebtab_lmc : null;
+}

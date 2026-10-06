@@ -1,4 +1,5 @@
 import { BACKEND_ROOT } from './config/env.js';
+import { UPLOAD_DIR } from './config/uploadDir.js';
 import express from 'express';
 import path from 'node:path';
 import { authPlaceholder } from './middlewares/authPlaceholder.js';
@@ -9,7 +10,6 @@ import { metaRoutes } from './routes/metaRoutes.js';
 import { productRoutes } from './routes/productRoutes.js';
 
 export const FRONTEND_DIR = path.resolve(BACKEND_ROOT, '..', 'frontend');
-export const UPLOAD_DIR = path.resolve(BACKEND_ROOT, process.env.UPLOAD_DIR ?? './uploads');
 
 /**
  * Baut die Express-App mit der Middleware-Reihenfolge aus docs/ARCHITECTURE.md 3.2.

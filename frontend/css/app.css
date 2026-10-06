@@ -94,3 +94,23 @@ a { color: var(--color-primary); }
 .table--compact th { position: static; font-weight: 400; text-align: left; }
 .row--computed th, .row--computed td { font-style: italic; color: var(--color-muted); }
 .table__row--zusatz td { color: var(--color-muted); }
+
+/* Phase 4: Fotogalerie, Grossansicht, Bestaetigungsdialog (docs/ARCHITECTURE.md 7.8, docs/SPEC.md 5.9) */
+.gallery__toolbar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.gallery__count { color: var(--color-muted); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-3); }
+.gallery__item { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; }
+.gallery__open { padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-bg); cursor: zoom-in; overflow: hidden; }
+.gallery__thumb { display: block; width: 100%; height: 140px; object-fit: cover; }
+
+.dialog { max-width: 480px; padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius); color: var(--color-text); }
+.dialog::backdrop, .lightbox::backdrop { background: rgba(0, 0, 0, 0.5); }
+.dialog__form { margin: 0; }
+.dialog__title { margin: 0 0 var(--space-3); font-size: 16px; }
+.dialog__line { margin: 0 0 var(--space-2); overflow-wrap: anywhere; }
+.dialog__actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
+
+.lightbox { max-width: 95vw; max-height: 95vh; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.lightbox__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.lightbox__caption { color: var(--color-muted); overflow-wrap: anywhere; }
+.lightbox__image { display: block; max-width: 90vw; max-height: 75vh; margin: var(--space-2) auto; }

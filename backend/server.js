@@ -3,6 +3,7 @@ import { pool } from './src/config/db.js';
 import { getSchemaInfo } from './src/config/schemaInfo.js';
 import { checkNutritionColumns } from './src/config/schemaCheck.js';
 import { logger } from './src/utils/logger.js';
+import { cleanTmpDir } from './src/services/photoService.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
 
@@ -20,6 +21,15 @@ createApp().listen(PORT, async (err) => {
   } catch (schemaErr) {
     logger.warn('Schema-Status nicht lesbar (DB nicht erreichbar?)', {
       code: schemaErr.code ?? schemaErr.message,
+    });
+  }
+  try {
+    // Reste abgebrochener Uploads (Absturz zwischen multer und Verschieben) entfernen — docs/SPEC.md 5.8.
+    const removed = await cleanTmpDir();
+    if (removed > 0) logger.info('Upload-Tmp aufgeraeumt', { removed });
+  } catch (tmpErr) {
+    logger.warn('Upload-Tmp konnte nicht aufgeraeumt werden', {
+      code: tmpErr.code ?? tmpErr.message,
     });
   }
 });

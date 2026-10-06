@@ -7,3 +7,6 @@ export const SEARCH_MAX_LENGTH = 255;
 export const PHOTO_MAX_PER_PRODUCT = 10;
 export const PHOTO_MAX_SIZE = 10 * 1024 * 1024;
 export const BEMERKUNG_MAX_LENGTH = 10000;
+
+/** Dateien je Upload-Request (docs/SPEC.md 5.8, #15). */
+export const PHOTO_MAX_FILES_PER_REQUEST = 10;

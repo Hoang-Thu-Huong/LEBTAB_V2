@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { escapeLike, findPage, count, findByLmc, exists, findNutritionByLmcs } from './lebtabModel.js';
+import {
+  escapeLike,
+  findPage,
+  count,
+  findByLmc,
+  exists,
+  findNutritionByLmcs,
+  findStoredLmc,
+} from './lebtabModel.js';
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
 
 const fakeConn = (rows) => ({ query: vi.fn().mockResolvedValue([rows]) });
@@ -99,5 +107,18 @@ describe('findNutritionByLmcs', () => {
     const conn = fakeConn([]);
     expect(await findNutritionByLmcs([], conn)).toEqual([]);
     expect(conn.query).not.toHaveBeenCalled();
+  });
+});
+
+describe('findStoredLmc', () => {
+  it('returns the product number exactly as stored, read with a single-column query', async () => {
+    const conn = fakeConn([{ lebtab_lmc: 'A1CK00' }]);
+    expect(await findStoredLmc('a1ck00', conn)).toBe('A1CK00');
+    expect(sqlOf(conn)).toBe('SELECT lebtab_lmc FROM lebtab WHERE lebtab_lmc = ? LIMIT 1');
+    expect(paramsOf(conn)).toEqual(['a1ck00']);
+  });
+
+  it('returns null when the product does not exist', async () => {
+    expect(await findStoredLmc('ZZZZZZ', fakeConn([]))).toBeNull();
   });
 });

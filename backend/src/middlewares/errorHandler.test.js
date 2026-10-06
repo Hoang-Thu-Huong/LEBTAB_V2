@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import multer from 'multer';
 import { errorHandler } from './errorHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { logger } from '../utils/logger.js';
@@ -90,5 +91,19 @@ describe('errorHandler', () => {
     errorHandler(new URIError('URI malformed'), { originalUrl: '/api/x' }, res, () => {});
     expect(res.statusCode).toBe(500);
     expect(res.body.error.code).toBe('INTERNAL_ERROR');
+  });
+
+  it.each([
+    ['LIMIT_FILE_SIZE', 'Datei zu groß (maximal 10 MB)'],
+    ['LIMIT_FILE_COUNT', 'Zu viele Dateien (maximal 10 pro Upload)'],
+    ['LIMIT_UNEXPECTED_FILE', 'Unerwartetes Dateifeld (erwartet: photos)'],
+    ['LIMIT_PART_COUNT', 'Upload fehlgeschlagen'],
+  ])('maps MulterError %s to 400 INVALID_FILE without logging', (code, message) => {
+    vi.clearAllMocks();
+    const res = mockRes();
+    errorHandler(new multer.MulterError(code, 'photos'), { originalUrl: '/api/products/A1CK00/photos' }, res, () => {});
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: { code: 'INVALID_FILE', message, status: 400 } });
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });
