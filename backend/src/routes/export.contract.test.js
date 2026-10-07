@@ -19,7 +19,8 @@ const app = createApp();
 afterAll(() => pool.end());
 
 const EXPORT_TIMEOUT = 60000;
-const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
+/** Zahl wie Excel auf deutschem Windows sie erwartet: Dezimal-KOMMA, kein Tausenderpunkt, nie Exponent (DECISIONS #94). */
+const PLAIN_NUMBER = /^-?\d+(,\d+)?$/;
 
 /** Laedt den Export als Bytes und liefert { res, records } (records[0] = Kopfzeile, NULL = null). */
 async function downloadCsv(type) {
@@ -65,7 +66,7 @@ describe.skipIf(!dbUp)('GET /api/export?type=lebtab (#12, echte DB, nur SELECT)'
       for (const column of TECHNICAL_COLUMNS) expect(records[0]).not.toContain(column);
       expect(records.length - 1).toBe(await countRows('lebtab'));
       const wrongLength = records.filter((record) => record.length !== LEBTAB_EXPORT_COLUMNS.length);
-      expect(wrongLength).toEqual([]); // Kommas, Anfuehrungszeichen und Zeilenumbrueche in Namen zerreissen keine Zeile
+      expect(wrongLength).toEqual([]); // Semikolons, Anfuehrungszeichen und Zeilenumbrueche in Namen zerreissen keine Zeile
 
       const lmcs = records.slice(1).map((record) => record[0]);
       expect(new Set(lmcs).size).toBe(lmcs.length);
@@ -77,7 +78,7 @@ describe.skipIf(!dbUp)('GET /api/export?type=lebtab (#12, echte DB, nur SELECT)'
   );
 
   it(
-    'writes every nutrition value as a plain decimal number or leaves the field empty',
+    'writes every nutrition value as a decimal number with a comma or leaves the field empty',
     async () => {
       const { records } = await downloadCsv('lebtab');
       expect(records.length).toBeGreaterThan(1);
@@ -102,7 +103,7 @@ describe.skipIf(!dbUp)('GET /api/export?type=lebtab (#12, echte DB, nur SELECT)'
         const { body: product } = await request(app).get(`/api/products/${record[0]}`);
         LEBTAB_EXPORT_COLUMNS.forEach((column, i) => {
           const expected = column in product ? product[column] : product.nutrition[column];
-          const actual = typeof expected === 'number' && record[i] !== null ? Number(record[i]) : record[i];
+          const actual = typeof expected === 'number' && record[i] !== null ? Number(record[i].replace(',', '.')) : record[i];
           expect(actual, `${record[0]}.${column}`).toEqual(expected);
         });
       }

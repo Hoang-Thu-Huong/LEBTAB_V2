@@ -1,9 +1,11 @@
 /**
- * Nur fuer Tests: minimaler RFC-4180-Parser (Trennzeichen ',', Felder optional in "…", "" = ein Anfuehrungszeichen,
+ * Nur fuer Tests: minimaler RFC-4180-Parser (Trennzeichen CSV_SEPARATOR, Felder optional in "…", "" = ein Anfuehrungszeichen,
  * CR/LF innerhalb von Anfuehrungszeichen gehoeren zum Feld). Unterscheidet NULL (leeres Feld -> null) von "" (-> '').
  * @param {string} text CSV ohne BOM
  * @returns {Array<Array<string|null>>}
  */
+import { CSV_SEPARATOR } from './csvFormatter.js';
+
 export function parseCsv(text) {
   const records = [];
   let record = [];
@@ -26,7 +28,7 @@ export function parseCsv(text) {
     } else if (ch === '"') {
       quoted = true;
       wasQuoted = true;
-    } else if (ch === ',') endField();
+    } else if (ch === CSV_SEPARATOR) endField();
     else if (ch === '\r' && text[i + 1] === '\n') {
       endField();
       records.push(record);

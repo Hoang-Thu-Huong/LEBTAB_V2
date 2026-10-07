@@ -15,10 +15,10 @@ import { CSV_BOM, CSV_CHUNK_SIZE } from '../utils/csvFormatter.js';
 import { LEBTAB_EXPORT_COLUMNS } from '../utils/exportColumns.js';
 import { EXPORT_TYPES, parseExportType, exportFilename, streamExport } from './exportService.js';
 
-const LEBTAB_HEADER = `${CSV_BOM}${LEBTAB_EXPORT_COLUMNS.join(',')}\r\n`;
+const LEBTAB_HEADER = `${CSV_BOM}${LEBTAB_EXPORT_COLUMNS.join(';')}\r\n`;
 /** Was czutabModel.findColumnNames heute liefert — der Export selbst kennt keine feste Spaltenliste. */
 const CZUTAB_COLUMNS = ['id', 'LMC', 'LM_Zutat', 'Menge', 'Version', 'Anrcode'];
-const CZUTAB_HEADER = `${CSV_BOM}${CZUTAB_COLUMNS.join(',')}\r\n`;
+const CZUTAB_HEADER = `${CSV_BOM}${CZUTAB_COLUMNS.join(';')}\r\n`;
 const ZUTAT = { id: 7, LMC: 'A1CK00', LM_Zutat: '000100', Menge: 12.5, Version: 3, Anrcode: 0 };
 /** Genug Zeilen fuer mehrere Ausgabebloecke (jede Zeile ~30 Zeichen). */
 const MANY = Math.ceil((CSV_CHUNK_SIZE * 3) / 30);
@@ -127,8 +127,8 @@ describe('streamExport — success', () => {
     expect(lebtabModel.streamExportRows).toHaveBeenCalledWith(conn.connection);
     expect(czutabModel.streamExportRows).not.toHaveBeenCalled();
     expect(czutabModel.findColumnNames).not.toHaveBeenCalled(); // lebtab: feste 92 Spalten, nie aus dem Schema
-    const line = ['000100', '"Milch 3,5%F"', ...LEBTAB_EXPORT_COLUMNS.slice(2).map((c) => (c === 'lebtab_E_CAL' ? '64.5' : ''))];
-    expect(text()).toBe(`${LEBTAB_HEADER}${line.join(',')}\r\n`);
+    const line = ['000100', 'Milch 3,5%F', ...LEBTAB_EXPORT_COLUMNS.slice(2).map((c) => (c === 'lebtab_E_CAL' ? '64,5' : ''))];
+    expect(text()).toBe(`${LEBTAB_HEADER}${line.join(';')}\r\n`);
     expect(result).toEqual({ bytes: Buffer.byteLength(text()), aborted: false });
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(conn.release).toHaveBeenCalledTimes(1);
@@ -143,7 +143,7 @@ describe('streamExport — success', () => {
     expect(czutabModel.findColumnNames).toHaveBeenCalledWith(conn);
     expect(czutabModel.streamExportRows).toHaveBeenCalledWith(conn.connection);
     expect(lebtabModel.streamExportRows).not.toHaveBeenCalled();
-    expect(text()).toBe(`${CZUTAB_HEADER}7,A1CK00,000100,12.5,3,0\r\n`);
+    expect(text()).toBe(`${CZUTAB_HEADER}7;A1CK00;000100;12,5;3;0\r\n`);
   });
 
   it('exports c_zutab as it is: a column added to the table appears without a code change', async () => {
@@ -152,7 +152,7 @@ describe('streamExport — success', () => {
     const { output, text } = collector();
     await streamExport('c_zutab', output, vi.fn());
     expect(text()).toBe(
-      `${CSV_BOM}id,LMC,LM_Zutat,Menge,Version,Anrcode,neu\r\n7,A1CK00,000100,12.5,3,0,x\r\n8,A1CK00,000100,12.5,3,0,\r\n`,
+      `${CSV_BOM}id;LMC;LM_Zutat;Menge;Version;Anrcode;neu\r\n7;A1CK00;000100;12,5;3;0;x\r\n8;A1CK00;000100;12,5;3;0;\r\n`,
     );
   });
 
@@ -206,8 +206,8 @@ describe('streamExport — success', () => {
     expect(writesWhileFull).toBe(0);
     const lines = text().split('\r\n');
     expect(lines).toHaveLength(MANY + 2);
-    expect(lines[1]).toBe('1,A1CK00,000100,12.5,3,0');
-    expect(lines[MANY]).toBe(`${MANY},A1CK00,000100,12.5,3,0`);
+    expect(lines[1]).toBe('1;A1CK00;000100;12,5;3;0');
+    expect(lines[MANY]).toBe(`${MANY};A1CK00;000100;12,5;3;0`);
   });
 });
 

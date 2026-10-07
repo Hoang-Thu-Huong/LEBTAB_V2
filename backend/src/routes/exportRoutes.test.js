@@ -63,8 +63,8 @@ describe('GET /api/export (#12)', () => {
     expect(res.headers['cache-control']).toBe('no-store');
     expect([...res.body.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     const lines = res.body.toString('utf8').slice(CSV_BOM.length).split('\r\n');
-    expect(lines[0]).toBe(LEBTAB_EXPORT_COLUMNS.join(','));
-    expect(lines[1].startsWith('A1CK00,"Joghurt ""Activia""",,,,2016-07-26,')).toBe(true);
+    expect(lines[0]).toBe(LEBTAB_EXPORT_COLUMNS.join(';'));
+    expect(lines[1].startsWith('A1CK00;"Joghurt ""Activia""";;;;2016-07-26;')).toBe(true);
     expect(lines).toHaveLength(3);
     expect(conn.release).toHaveBeenCalledTimes(1);
   });
@@ -74,7 +74,7 @@ describe('GET /api/export (#12)', () => {
     const res = await download('/api/export?type=c_zutab');
     expect(res.status).toBe(200);
     expect(res.headers['content-disposition']).toBe(`attachment; filename="${exportFilename('c_zutab')}"`);
-    expect(res.body.toString('utf8')).toBe(`${CSV_BOM}id,LMC,LM_Zutat,Menge,Version,Anrcode\r\n7,A1CK00,000100,12.5,3,0\r\n`);
+    expect(res.body.toString('utf8')).toBe(`${CSV_BOM}id;LMC;LM_Zutat;Menge;Version;Anrcode\r\n7;A1CK00;000100;12,5;3;0\r\n`);
   });
 
   it('200: delivers a file of several blocks completely', async () => {

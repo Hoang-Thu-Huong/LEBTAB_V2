@@ -4,6 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import {
   CSV_BOM,
   CSV_CHUNK_SIZE,
+  CSV_DECIMAL,
   CSV_LINE_END,
   CSV_SEPARATOR,
   numberToString,
@@ -23,15 +24,16 @@ async function runCsv(columns, rows) {
   return chunks;
 }
 
-describe('constants (DECISIONS #3)', () => {
-  it('uses comma, CRLF and the UTF-8 byte order mark', () => {
-    expect(CSV_SEPARATOR).toBe(',');
+describe('constants (DECISIONS #94 — Excel auf deutschem Windows)', () => {
+  it('uses semicolon as separator, decimal comma, CRLF and the UTF-8 byte order mark', () => {
+    expect(CSV_SEPARATOR).toBe(';');
+    expect(CSV_DECIMAL).toBe(',');
     expect(CSV_LINE_END).toBe('\r\n');
     expect(Buffer.from(CSV_BOM, 'utf8')).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
   });
 });
 
-describe('numberToString — exactly as stored, decimal point, never exponent notation', () => {
+describe('numberToString — internal form: exactly as stored, decimal POINT (shared algorithm with the frontend), never exponent notation', () => {
   it('keeps ordinary values verbatim without rounding', () => {
     expect(numberToString(12.5)).toBe('12.5');
     expect(numberToString(100)).toBe('100');
@@ -79,20 +81,29 @@ describe('toCsvField', () => {
     expect(toCsvField('')).toBe('""');
   });
 
-  it('writes numbers with numberToString, including 0', () => {
+  it('writes numbers with a decimal COMMA and no thousands separator, including 0 (DECISIONS #94)', () => {
     expect(toCsvField(0)).toBe('0');
     expect(toCsvField(3)).toBe('3');
-    expect(toCsvField(1e-7)).toBe('0.0000001');
+    expect(toCsvField(12.5)).toBe('12,5');
+    expect(toCsvField(-3.25)).toBe('-3,25');
+    expect(toCsvField(1e-7)).toBe('0,0000001');
+    expect(toCsvField(1234567.891)).toBe('1234567,891');
+    expect(toCsvField(0.11912750000000001)).toBe('0,11912750000000001');
   });
 
-  it('leaves plain text, umlauts, semicolons and dates unquoted', () => {
+  it('never quotes a number: Excel must see it as a number, not as text', () => {
+    expect(toCsvField(93.7823712744423)).toBe('93,7823712744423');
+  });
+
+  it('leaves plain text, umlauts, commas and dates unquoted', () => {
     expect(toCsvField('Käse 3.5%F')).toBe('Käse 3.5%F');
-    expect(toCsvField('a;b')).toBe('a;b');
+    expect(toCsvField('Milch 3,5%F')).toBe('Milch 3,5%F');
     expect(toCsvField('2016-07-26')).toBe('2016-07-26');
   });
 
-  it('quotes fields containing comma, quote, CR or LF and doubles quotes', () => {
-    expect(toCsvField('Milch 3,5%F')).toBe('"Milch 3,5%F"');
+  it('quotes fields containing semicolon, quote, CR or LF and doubles quotes', () => {
+    expect(toCsvField('a;b')).toBe('"a;b"');
+    expect(toCsvField('Salz; grob')).toBe('"Salz; grob"');
     expect(toCsvField('Joghurt "Activia"')).toBe('"Joghurt ""Activia"""');
     expect(toCsvField('Zeile 1\r\nZeile 2')).toBe('"Zeile 1\r\nZeile 2"');
     expect(toCsvField('a\nb')).toBe('"a\nb"');
@@ -118,12 +129,12 @@ describe('toCsvField', () => {
 });
 
 describe('toCsvLine', () => {
-  it('joins fields with commas and ends with CRLF', () => {
-    expect(toCsvLine(['A1CK00', 'Milch 3,5%F', null, 3, 12.5])).toBe('A1CK00,"Milch 3,5%F",,3,12.5\r\n');
+  it('joins fields with semicolons and ends with CRLF', () => {
+    expect(toCsvLine(['A1CK00', 'Milch 3,5%F', null, 3, 12.5])).toBe('A1CK00;Milch 3,5%F;;3;12,5\r\n');
   });
 
   it('writes a line of only NULLs as bare separators', () => {
-    expect(toCsvLine([null, null, null])).toBe(',,\r\n');
+    expect(toCsvLine([null, null, null])).toBe(';;\r\n');
   });
 });
 
@@ -135,22 +146,22 @@ describe('createCsvStream', () => {
       { code: 'A', name: 'eins', wert: 1 },
       { code: 'B', name: 'zwei', wert: null },
     ])).join('');
-    expect(text).toBe(CSV_BOM + 'code,name,wert\r\nA,eins,1\r\nB,zwei,\r\n');
+    expect(text).toBe(CSV_BOM + 'code;name;wert\r\nA;eins;1\r\nB;zwei;\r\n');
     expect(text.split(CSV_BOM)).toHaveLength(2);
   });
 
   it('emits BOM + header even when there is no row at all', async () => {
-    expect((await runCsv(COLUMNS, [])).join('')).toBe(CSV_BOM + 'code,name,wert\r\n');
+    expect((await runCsv(COLUMNS, [])).join('')).toBe(CSV_BOM + 'code;name;wert\r\n');
   });
 
   it('takes the column order from `columns`, not from the key order of the row', async () => {
     const text = (await runCsv(COLUMNS, [{ wert: 7, name: 'n', code: 'C', extra: 'ignored' }])).join('');
-    expect(text).toBe(CSV_BOM + 'code,name,wert\r\nC,n,7\r\n');
+    expect(text).toBe(CSV_BOM + 'code;name;wert\r\nC;n;7\r\n');
   });
 
   it('writes a missing key as an empty field instead of "undefined"', async () => {
     const text = (await runCsv(COLUMNS, [{ code: 'D' }])).join('');
-    expect(text).toBe(CSV_BOM + 'code,name,wert\r\nD,,\r\n');
+    expect(text).toBe(CSV_BOM + 'code;name;wert\r\nD;;\r\n');
   });
 
   it('hands data on in blocks instead of collecting the whole file', async () => {
@@ -173,12 +184,13 @@ describe('createCsvStream', () => {
       { code: 'YKH000', name: '', wert: null },
       { code: 'ÄÖÜ ß', name: ' führendes Leerzeichen', wert: -0.5 },
       { code: 'E', name: 'Zeile\nnur LF, und ""doppelt""', wert: 0 },
+      { code: 'F', name: 'Salz; grob', wert: 2.5 },
     ];
     const text = (await runCsv(COLUMNS, rows)).join('');
     const records = parseCsv(text.slice(CSV_BOM.length));
     expect(records[0]).toEqual(COLUMNS);
     expect(records.slice(1)).toEqual(
-      rows.map((row) => [row.code, row.name, row.wert === null ? null : numberToString(row.wert)]),
+      rows.map((row) => [row.code, row.name, row.wert === null ? null : toCsvField(row.wert)]),
     );
   });
 });
