@@ -139,3 +139,35 @@ export function streamExportRows(rawConn) {
     .query(`SELECT ${LEBTAB_EXPORT_COLUMNS.join(', ')} FROM lebtab ORDER BY lebtab_lmc`)
     .stream();
 }
+
+/**
+ * Welche der Codes existieren als Produkt? EINE Abfrage (kein N+1) — fuer die harte Zutatenpruefung beim Anlegen
+ * (docs/SPEC.md 5.4). Liefert lebtab_lmc so, wie es in der DB steht (Kollation _ci). Leere Liste -> keine Abfrage.
+ * @param {string[]} lmcs
+ * @param {import('mysql2/promise').Pool | import('mysql2/promise').PoolConnection} conn
+ * @returns {Promise<string[]>}
+ */
+export async function findStoredLmcs(lmcs, conn) {
+  if (lmcs.length === 0) return [];
+  const [rows] = await conn.query('SELECT lebtab_lmc FROM lebtab WHERE lebtab_lmc IN (?)', [lmcs]);
+  return rows.map((row) => row.lebtab_lmc);
+}
+
+/** Spalten eines INSERT in lebtab: 7 Basis + 6 Klassifikation + 79 Naehrwerte = 92 — nie die 3 technischen. */
+const INSERT_COLUMNS = Object.freeze([...BASIC_COLUMNS, ...CLASSIFICATION_COLUMNS, ...NUTRITION_COLUMNS]);
+
+/**
+ * Legt ein Produkt an (docs/SPEC.md 6.1 #3). Die 3 technischen Spalten bekommen ihre DEFAULTs aus Migration 001
+ * (_row_version 1, lebtab_nutrition_stale 0, lebtab_bemerkung NULL). Werte nur per Platzhalter; fehlt ein Schluessel,
+ * ist das ein Programmierfehler — deshalb wird vorher geprueft, nicht stillschweigend NULL geschrieben.
+ * @param {Record<string, unknown>} row flache Zeile mit genau den 92 Spalten (Produktspalten + nutrition)
+ * @param {import('mysql2/promise').Pool | import('mysql2/promise').PoolConnection} conn Transaktions-Connection
+ * @returns {Promise<void>}
+ * @throws {Error} mysql2-Fehler, z. B. code 'ER_DUP_ENTRY' bei doppelter Produktnummer (Race) — der Service mappt auf 409
+ */
+export async function insert(row, conn) {
+  const missing = INSERT_COLUMNS.filter((column) => row[column] === undefined);
+  if (missing.length > 0) throw new TypeError(`lebtabModel.insert: fehlende Spalten ${missing.join(', ')}`);
+  const values = INSERT_COLUMNS.map((column) => row[column]);
+  await conn.query(`INSERT INTO lebtab (${INSERT_COLUMNS.join(', ')}) VALUES (?)`, [values]);
+}

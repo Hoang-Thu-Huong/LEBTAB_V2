@@ -25,3 +25,12 @@ export async function headProduct(req, res, next) {
     next(err);
   }
 }
+
+/** POST #3: der Body kommt validiert aus validateRequest(parseCreateProductBody) in req.validated. */
+export async function createProduct(req, res, next) {
+  try {
+    res.status(201).json(await productService.createProduct(req.validated));
+  } catch (err) {
+    next(err);
+  }
+}

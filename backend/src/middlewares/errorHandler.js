@@ -1,6 +1,6 @@
 import { AppError } from '../utils/AppError.js';
 import { logger } from '../utils/logger.js';
-import { PHOTO_MAX_FILES_PER_REQUEST, PHOTO_MAX_SIZE } from '../utils/limits.js';
+import { JSON_BODY_LIMIT_MB, PHOTO_MAX_FILES_PER_REQUEST, PHOTO_MAX_SIZE } from '../utils/limits.js';
 
 /** mysql2-/Netzwerk-Fehlercodes, die "Datenbank nicht erreichbar" bedeuten (docs/SPEC.md 6.2 DB_UNAVAILABLE). */
 const DB_DOWN_CODES = new Set([
@@ -23,6 +23,17 @@ const UPLOAD_MESSAGES = {
 };
 const UPLOAD_FALLBACK_MESSAGE = 'Upload fehlgeschlagen';
 
+/**
+ * Fehler von express.json (body-parser, Feld err.type) -> 400 VALIDATION_ERROR, nicht loggen (DECISIONS #89):
+ * kaputtes JSON, Body ueber dem Limit, unbekannter Zeichensatz oder Kodierung sind Eingabefehler des Aufrufers.
+ */
+const BODY_MESSAGES = new Map([
+  ['entity.parse.failed', 'Ungültiges JSON im Request-Body'],
+  ['entity.too.large', `Anfrage zu groß (maximal ${JSON_BODY_LIMIT_MB} MB)`],
+  ['charset.unsupported', 'Zeichensatz der Anfrage wird nicht unterstützt'],
+  ['encoding.unsupported', 'Kodierung der Anfrage wird nicht unterstützt'],
+]);
+
 function send(res, status, code, message) {
   res.status(status).json({ error: { code, message, status } });
 }
@@ -37,12 +48,13 @@ export function errorHandler(err, req, res, _next) {
     const body = { error: { code: err.code, message: err.message, status: err.status } };
     if (err.details !== undefined) body.error.details = err.details;
     if (err.current !== undefined) body.current = err.current;
-    if (err.status >= 500) logger.error(err.code, { path: req.originalUrl, stack: err.stack });
+    // Bewusst geworfene 5xx (503 MIGRATION_REQUIRED) sind Betriebszustand, kein Programmierfehler: ohne Stack loggen.
+    if (err.status >= 500) logger.error(err.code, { path: req.originalUrl });
     res.status(err.status).json(body);
     return;
   }
-  if (err && err.type === 'entity.parse.failed') {
-    send(res, 400, 'VALIDATION_ERROR', 'Ungültiges JSON im Request-Body');
+  if (err && BODY_MESSAGES.has(err.type)) {
+    send(res, 400, 'VALIDATION_ERROR', BODY_MESSAGES.get(err.type));
     return;
   }
   // Express-Router: Pfad mit kaputter %-Kodierung (/api/products/%E0%A4%A) -> URIError mit status 400, BEVOR ein

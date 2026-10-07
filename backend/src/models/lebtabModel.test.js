@@ -6,6 +6,8 @@ import {
   findByLmc,
   findNutritionByLmcs,
   findStoredLmc,
+  findStoredLmcs,
+  insert,
   streamExportRows,
 } from './lebtabModel.js';
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
@@ -131,5 +133,59 @@ describe('streamExportRows', () => {
     const rawConn = { query: vi.fn(() => ({ stream: () => ({}) })) };
     streamExportRows(rawConn);
     expect(rawConn.query.mock.calls[0]).toHaveLength(1);
+  });
+});
+
+describe('findStoredLmcs (Phase 6)', () => {
+  it('uses ONE IN (?) query and returns the stored codes', async () => {
+    const conn = fakeConn([{ lebtab_lmc: 'A1A100' }, { lebtab_lmc: 'JVB100' }]);
+    expect(await findStoredLmcs(['a1a100', 'JVB100', 'X00000'], conn)).toEqual(['A1A100', 'JVB100']);
+    expect(sqlOf(conn)).toBe('SELECT lebtab_lmc FROM lebtab WHERE lebtab_lmc IN (?)');
+    expect(paramsOf(conn)).toEqual([['a1a100', 'JVB100', 'X00000']]);
+  });
+  it('empty list -> [] without a query', async () => {
+    const conn = fakeConn([]);
+    expect(await findStoredLmcs([], conn)).toEqual([]);
+    expect(conn.query).not.toHaveBeenCalled();
+  });
+});
+
+describe('insert (Phase 6)', () => {
+  const row = () => {
+    const r = {
+      lebtab_lmc: 'ZZT001', lebtab_Bezeich: 'Test', lebtab_Marke: null, lebtab_Version: null, lebtab_Itemart: 'V',
+      lebtab_Datum: '2026-10-06', lebtab_aktuell: 1, lebtab_lmgruppe: null, lebtab_gruppename: null,
+      lebtab_source: null, lebtab_source_code: null, lebtab_source_detail: null, lebtab_probiotisch: null,
+    };
+    NUTRITION_COLUMNS.forEach((c, i) => { r[c] = i === 3 ? null : i; });
+    return r;
+  };
+
+  it('inserts exactly the 92 original columns in table order with placeholders only — never the 3 technical columns', async () => {
+    const conn = fakeConn({ affectedRows: 1 });
+    await insert({ ...row(), _row_version: 9, lebtab_bemerkung: 'x' }, conn);
+    const sql = sqlOf(conn);
+    const columns = /INSERT INTO lebtab \((.*)\) VALUES \(\?\)$/.exec(sql)[1].split(', ');
+    expect(columns).toHaveLength(92);
+    expect(columns.slice(0, 7)).toEqual(['lebtab_lmc', 'lebtab_Bezeich', 'lebtab_Marke', 'lebtab_Version', 'lebtab_Itemart', 'lebtab_Datum', 'lebtab_aktuell']);
+    expect(columns.slice(13)).toEqual([...NUTRITION_COLUMNS]);
+    expect(columns.slice(7, 13)).toEqual(['lebtab_lmgruppe', 'lebtab_gruppename', 'lebtab_source', 'lebtab_source_code', 'lebtab_source_detail', 'lebtab_probiotisch']);
+    expect(columns).not.toContain('_row_version');
+    expect(columns).not.toContain('lebtab_bemerkung');
+    expect(sql).not.toContain('ZZT001');
+    const values = paramsOf(conn)[0];
+    expect(values).toHaveLength(92);
+    expect(values.slice(0, 2)).toEqual(['ZZT001', 'Test']);
+    expect(values[7]).toBeNull(); // lebtab_lmgruppe
+    expect(values[13]).toBe(0); // lebtab_E_CAL
+    expect(values[16]).toBeNull(); // null bleibt null, wird nicht 0
+  });
+
+  it('throws before querying when a column is missing (undefined would silently become NULL)', async () => {
+    const conn = fakeConn({ affectedRows: 1 });
+    const r = row();
+    delete r.lebtab_V_B1;
+    await expect(insert(r, conn)).rejects.toThrow(/lebtab_V_B1/);
+    expect(conn.query).not.toHaveBeenCalled();
   });
 });

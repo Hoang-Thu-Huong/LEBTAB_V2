@@ -4,7 +4,14 @@
  */
 export const MENGE_SUM_TOLERANCE = 0.05;
 const ITEMART_ZUSATZ = 'A';
+/** Anzeige-Tag fuer Itemart A — EINE Stelle fuer ingredientTable und ingredientPicker (docs/SPEC.md 5.4). */
+export const ZUSATZ_LABEL = 'Zusatz';
 const TARGET_SUM = 100;
+
+/** Tag-Text einer Itemart: A -> "Zusatz", sonst der Buchstabe selbst. */
+export function itemartLabel(itemart) {
+  return itemart === ITEMART_ZUSATZ ? ZUSATZ_LABEL : itemart;
+}
 
 /** Zeile ist ein Zusatz (Itemart A)? Unbekannte Zutaten (zutat === null) sind KEIN Zusatz. */
 export function isZusatz(row) {

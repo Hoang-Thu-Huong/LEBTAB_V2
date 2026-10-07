@@ -116,3 +116,20 @@ a { color: var(--color-primary); }
 .lightbox__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .lightbox__caption { color: var(--color-muted); overflow-wrap: anywhere; }
 .lightbox__image { display: block; max-width: 90vw; max-height: 75vh; margin: var(--space-2) auto; }
+
+/* Phase 6: Formular "Neu anlegen", Zutaten-Suche (docs/ARCHITECTURE.md 7.4) */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-3) var(--space-4); }
+.field { display: flex; flex-direction: column; gap: var(--space-1); font-size: 12px; color: var(--color-muted); }
+.field__label { font-size: 12px; }
+.field__input--lmc { text-transform: uppercase; }
+.field__error { font-size: 12px; color: var(--color-danger); }
+.form-actions { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); }
+.form-actions .btn { text-decoration: none; color: inherit; }
+.form-actions .btn--primary { color: var(--color-primary-text); }
+.picker { margin-bottom: var(--space-3); }
+.picker__list { list-style: none; margin: var(--space-2) 0 0; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius); max-height: 320px; overflow-y: auto; background: var(--color-surface); }
+.picker__item { display: flex; gap: var(--space-3); align-items: center; width: 100%; padding: var(--space-2) var(--space-3); border: 0; border-bottom: 1px solid var(--color-border); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.picker__item:hover, .picker__item:focus { background: var(--color-bg); }
+.picker__name { flex: 1; }
+.input--menge { width: 120px; text-align: right; }
+.btn--small { padding: var(--space-1) var(--space-2); font-size: 12px; }

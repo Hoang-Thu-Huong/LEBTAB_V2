@@ -53,6 +53,14 @@ describe('errorHandler', () => {
     expect(JSON.stringify(res.body)).not.toContain('SECRET');
   });
 
+  it('logs a deliberate 5xx AppError (503 MIGRATION_REQUIRED) with code + path but without a stack', () => {
+    const res = mockRes();
+    logger.error.mockClear();
+    errorHandler(new AppError(503, 'MIGRATION_REQUIRED', 'Migration fehlt'), { originalUrl: '/api/products' }, res, () => {});
+    expect(res.statusCode).toBe(503);
+    expect(logger.error).toHaveBeenCalledWith('MIGRATION_REQUIRED', { path: '/api/products' });
+  });
+
   it('maps connection errors to 503 DB_UNAVAILABLE', () => {
     const res = mockRes();
     const dbErr = new Error('connect ECONNREFUSED 127.0.0.1:3306');
@@ -105,5 +113,30 @@ describe('errorHandler', () => {
     expect(res.statusCode).toBe(400);
     expect(res.body).toEqual({ error: { code: 'INVALID_FILE', message, status: 400 } });
     expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['entity.parse.failed', 'Ungültiges JSON im Request-Body'],
+    ['entity.too.large', 'Anfrage zu groß (maximal 1 MB)'],
+    ['charset.unsupported', 'Zeichensatz der Anfrage wird nicht unterstützt'],
+    ['encoding.unsupported', 'Kodierung der Anfrage wird nicht unterstützt'],
+  ])('maps the express.json error %s to 400 VALIDATION_ERROR without logging (DECISIONS #89)', (type, message) => {
+    vi.clearAllMocks();
+    const res = mockRes();
+    const err = new Error('body-parser');
+    err.type = type;
+    err.status = type === 'entity.too.large' ? 413 : 400;
+    errorHandler(err, { originalUrl: '/api/products' }, res, () => {});
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: { code: 'VALIDATION_ERROR', message, status: 400 } });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it('keeps an unknown body-parser type (e.g. request.aborted) a 500', () => {
+    const res = mockRes();
+    const err = new Error('aborted');
+    err.type = 'request.aborted';
+    errorHandler(err, { originalUrl: '/api/products' }, res, () => {});
+    expect(res.statusCode).toBe(500);
   });
 });

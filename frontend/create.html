@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LEBTAB — Neues Produkt</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="topbar__title">LEBTAB Eingabemaske</h1>
+    <nav class="topbar__nav">
+      <a href="index.html" class="topbar__link">Produkte</a>
+    </nav>
+  </header>
+
+  <main id="page" class="page">
+    <section class="page-header">
+      <a class="link" href="index.html">‹ Zurück zur Liste</a>
+      <h2 class="page-header__title">Neues Produkt</h2>
+    </section>
+    <div id="message" class="message" hidden></div>
+    <div id="content" hidden>
+      <section class="card"><h3 class="card__title">Stammdaten</h3><div id="form"></div></section>
+      <section class="card">
+        <h3 class="card__title">Zutaten</h3>
+        <div id="picker" class="picker"></div>
+        <div id="ingredients"></div>
+      </section>
+      <section class="form-actions">
+        <button id="btn-save" class="btn btn--primary" type="button">Speichern</button>
+        <a class="btn" href="index.html">Abbrechen</a>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="js/pages/create.js"></script>
+</body>
+</html>

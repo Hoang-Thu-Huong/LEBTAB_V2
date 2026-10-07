@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { findByLmcWithZutat, findColumnNames, streamExportRows } from './czutabModel.js';
+import { findByLmcWithZutat, findColumnNames, streamExportRows, insertMany } from './czutabModel.js';
 
 describe('czutabModel.findByLmcWithZutat', () => {
   it('maps joined rows to IngredientRow; unmatched LM_Zutat -> zutat: null (SPEC 6.1.1)', async () => {
@@ -44,5 +44,27 @@ describe('czutabModel.streamExportRows', () => {
     const rawConn = { query: vi.fn(() => ({ stream: () => rowStream })) };
     expect(streamExportRows(rawConn)).toBe(rowStream);
     expect(rawConn.query.mock.calls[0]).toEqual(['SELECT * FROM c_zutab ORDER BY LMC, id']);
+  });
+});
+
+describe('czutabModel.insertMany (Phase 6)', () => {
+  it('inserts all rows with ONE multi-row INSERT (VALUES ?) in list order and returns affectedRows', async () => {
+    const conn = { query: vi.fn().mockResolvedValue([{ affectedRows: 2 }]) };
+    const rows = [
+      { LMC: 'ZZT001', LM_Zutat: 'A1A100', Menge: 60, Version: 0, Anrcode: 0 },
+      { LMC: 'ZZT001', LM_Zutat: 'JVB100', Menge: 0.5, Version: 0, Anrcode: 0 },
+    ];
+    expect(await insertMany(rows, conn)).toBe(2);
+    expect(conn.query).toHaveBeenCalledTimes(1);
+    expect(conn.query.mock.calls[0][0].replace(/\s+/g, ' ')).toBe(
+      'INSERT INTO c_zutab (LMC, LM_Zutat, Menge, Version, Anrcode) VALUES ?',
+    );
+    expect(conn.query.mock.calls[0][1]).toEqual([[['ZZT001', 'A1A100', 60, 0, 0], ['ZZT001', 'JVB100', 0.5, 0, 0]]]);
+  });
+
+  it('empty list -> 0 without a query', async () => {
+    const conn = { query: vi.fn() };
+    expect(await insertMany([], conn)).toBe(0);
+    expect(conn.query).not.toHaveBeenCalled();
   });
 });

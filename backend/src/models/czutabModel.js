@@ -64,3 +64,20 @@ export async function findColumnNames(conn) {
 export function streamExportRows(rawConn) {
   return rawConn.query('SELECT * FROM c_zutab ORDER BY LMC, id').stream();
 }
+
+/**
+ * Fuegt Rezepturzeilen in EINER Abfrage ein (Phase 6, docs/SPEC.md 6.1 #3). id vergibt AUTO_INCREMENT in
+ * Reihenfolge der Liste. Leere Liste -> keine Abfrage. Version/Anrcode setzt der Service (docs/DATA.md 4.2).
+ * @param {Array<{LMC: string, LM_Zutat: string, Menge: number, Version: number, Anrcode: number}>} rows
+ * @param {import('mysql2/promise').Pool | import('mysql2/promise').PoolConnection} conn Transaktions-Connection
+ * @returns {Promise<number>} Anzahl eingefuegter Zeilen
+ */
+export async function insertMany(rows, conn) {
+  if (rows.length === 0) return 0;
+  const values = rows.map((row) => [row.LMC, row.LM_Zutat, row.Menge, row.Version, row.Anrcode]);
+  const [result] = await conn.query(
+    'INSERT INTO c_zutab (LMC, LM_Zutat, Menge, Version, Anrcode) VALUES ?',
+    [values],
+  );
+  return result.affectedRows;
+}

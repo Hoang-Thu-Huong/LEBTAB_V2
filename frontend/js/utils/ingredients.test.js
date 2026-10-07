@@ -1,9 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { MENGE_SUM_TOLERANCE, isZusatz, summarizeIngredients } from './ingredients.js';
+import { MENGE_SUM_TOLERANCE, isZusatz, summarizeIngredients, itemartLabel, ZUSATZ_LABEL } from './ingredients.js';
 
 const row = (id, Menge, itemart) => ({
   id, LMC: 'P00001', LM_Zutat: `Z${id}`, Menge, Version: 3, Anrcode: 0,
   zutat: itemart === null ? null : { lebtab_Bezeich: `Zutat ${id}`, lebtab_Itemart: itemart },
+});
+
+describe('itemartLabel', () => {
+  it('maps Itemart A to the shared label "Zusatz" and keeps every other Itemart', () => {
+    expect(ZUSATZ_LABEL).toBe('Zusatz');
+    expect(itemartLabel('A')).toBe('Zusatz');
+    expect(itemartLabel('L')).toBe('L');
+  });
 });
 
 describe('isZusatz', () => {
