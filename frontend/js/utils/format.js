@@ -1,7 +1,8 @@
 /**
  * Anzeige-Formatierung (docs/ARCHITECTURE.md 7.7). Keine Rundung, kein toLocaleString, kein toFixed.
  */
-const DASH = '–';
+/** Anzeige fuer leere/unbekannte Werte — EINE Stelle fuer alle Komponenten. */
+export const DASH = '–';
 const SALZ_FACTOR = 2.5;
 const MG_PER_G = 1000;
 
@@ -72,7 +73,7 @@ export function salzFromNatrium(natrMg) {
 
 /**
  * Heutiges Datum als 'YYYY-MM-DD' in der LOKALEN Zeitzone des Browsers (docs/ARCHITECTURE.md 7.7).
- * Nicht toISOString(): das liefert UTC und springt in Deutschland abends auf den naechsten Tag.
+ * Nicht toISOString(): das liefert UTC und zeigt in Deutschland nach Mitternacht (bis 01:00 bzw. 02:00 Uhr) noch den Vortag.
  * @param {Date} [now]
  * @returns {string}
  */

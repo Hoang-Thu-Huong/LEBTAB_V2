@@ -65,7 +65,7 @@ export const api = {
   uploadPhotos: (lmc, formData) => request('POST', `/products/${enc(lmc)}/photos`, formData),
   deletePhoto: (lmc, filename) =>
     request('DELETE', `/products/${enc(lmc)}/photos/${enc(filename)}`),
-  getArchive: (type, page = 1) => request('GET', `/archive?type=${type}&page=${page}`),
+  getArchive: (type, page = 1) => request('GET', `/archive?type=${enc(type)}&page=${page}`),
   restore: (type, id) => request('POST', `/archive/restore/${type}/${id}`),
   // #2b — einzige Ausnahme ohne request(): HEAD hat keinen Body. 404 = frei, 2xx = vergeben,
   // alles andere ist ein FEHLER (503 darf nie als "existiert nicht" gelesen werden).

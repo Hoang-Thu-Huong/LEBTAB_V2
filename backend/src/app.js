@@ -8,6 +8,7 @@ import { errorHandler } from './middlewares/errorHandler.js';
 import { healthRoutes } from './routes/healthRoutes.js';
 import { metaRoutes } from './routes/metaRoutes.js';
 import { productRoutes } from './routes/productRoutes.js';
+import { exportRoutes } from './routes/exportRoutes.js';
 
 export const FRONTEND_DIR = path.resolve(BACKEND_ROOT, '..', 'frontend');
 
@@ -25,7 +26,8 @@ export function createApp() {
   app.use('/api/health', healthRoutes);
   app.use('/api/meta', metaRoutes);
   app.use('/api/products', productRoutes);
-  // Weitere Router (archive, export) werden in spaeteren Phasen hier eingehaengt.
+  app.use('/api/export', exportRoutes);
+  // Weiterer Router (archive) wird in einer spaeteren Phase hier eingehaengt.
 
   app.use(express.static(FRONTEND_DIR));
   app.use('/uploads', express.static(path.join(UPLOAD_DIR, 'active')));

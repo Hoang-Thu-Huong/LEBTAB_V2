@@ -37,3 +37,30 @@ export async function findByLmcWithZutat(lmc, conn) {
         : { lebtab_Bezeich: row.zutat_Bezeich, lebtab_Itemart: row.zutat_Itemart },
   }));
 }
+
+/**
+ * Spaltennamen von c_zutab in Tabellenreihenfolge, in der physischen Schreibweise der Tabelle — die Kopfzeile des
+ * CSV-Exports (#12). Bewusst nicht fest im Code: der Export liefert c_zutab so, wie die Tabelle ist (DECISIONS #85).
+ * @param {import('mysql2/promise').Pool | import('mysql2/promise').PoolConnection} conn
+ * @returns {Promise<string[]>}
+ */
+export async function findColumnNames(conn) {
+  const [rows] = await conn.query(
+    `SELECT COLUMN_NAME AS name FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'c_zutab'
+      ORDER BY ORDINAL_POSITION`,
+  );
+  return rows.map((row) => row.name);
+}
+
+/**
+ * Alle Rezepturzeilen als Zeilen-Stream fuer den CSV-Export (#12), nach Produkt gruppiert (ORDER BY LMC, id).
+ * SELECT * ist hier erlaubt (docs/SPEC.md 6.1 #12): c_zutab wird mit allen Spalten exportiert, die die Tabelle hat —
+ * im Gegensatz zu lebtab, wo SELECT * ueberall verboten ist (docs/DATA.md 4.0).
+ * Braucht die ROHE Verbindung (PoolConnection.connection), siehe lebtabModel.streamExportRows.
+ * @param {import('mysql2').Connection} rawConn
+ * @returns {import('node:stream').Readable} objectMode: ein Zeilenobjekt je Rezepturzeile
+ */
+export function streamExportRows(rawConn) {
+  return rawConn.query('SELECT * FROM c_zutab ORDER BY LMC, id').stream();
+}

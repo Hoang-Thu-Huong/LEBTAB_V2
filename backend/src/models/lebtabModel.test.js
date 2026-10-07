@@ -4,11 +4,13 @@ import {
   findPage,
   count,
   findByLmc,
-  exists,
   findNutritionByLmcs,
   findStoredLmc,
+  streamExportRows,
 } from './lebtabModel.js';
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
+import { LEBTAB_EXPORT_COLUMNS } from '../utils/exportColumns.js';
+import { TECHNICAL_COLUMNS } from '../utils/productColumns.js';
 
 const fakeConn = (rows) => ({ query: vi.fn().mockResolvedValue([rows]) });
 const NO_FILTERS = { search: null, itemarts: null, datumFrom: null, datumTo: null };
@@ -74,15 +76,6 @@ describe('findByLmc', () => {
   });
 });
 
-describe('exists', () => {
-  it('returns true/false from a 1-row probe', async () => {
-    expect(await exists('A1CK00', fakeConn([{ found: 1 }]))).toBe(true);
-    const conn = fakeConn([]);
-    expect(await exists('ZZZZZZ', conn)).toBe(false);
-    expect(sqlOf(conn)).toBe('SELECT 1 AS found FROM lebtab WHERE lebtab_lmc = ? LIMIT 1');
-  });
-});
-
 describe('findNutritionByLmcs', () => {
   it('reads code, Itemart and the 79 nutrition columns with one IN (?) query, never SELECT *', async () => {
     const conn = fakeConn([{ lebtab_lmc: 'AFB000' }, { lebtab_lmc: 'JVB100' }]);
@@ -120,5 +113,23 @@ describe('findStoredLmc', () => {
 
   it('returns null when the product does not exist', async () => {
     expect(await findStoredLmc('ZZZZZZ', fakeConn([]))).toBeNull();
+  });
+});
+
+describe('streamExportRows', () => {
+  it('streams exactly the 92 export columns ordered by lebtab_lmc — never * and never a technical column', () => {
+    const rowStream = { marker: 'row stream' };
+    const rawConn = { query: vi.fn(() => ({ stream: () => rowStream })) };
+    expect(streamExportRows(rawConn)).toBe(rowStream);
+    const sql = rawConn.query.mock.calls[0][0];
+    expect(sql).toBe(`SELECT ${LEBTAB_EXPORT_COLUMNS.join(', ')} FROM lebtab ORDER BY lebtab_lmc`);
+    expect(sql).not.toContain('*');
+    for (const column of TECHNICAL_COLUMNS) expect(sql).not.toContain(column);
+  });
+
+  it('passes neither parameters nor a callback, so mysql2 does not buffer the result', () => {
+    const rawConn = { query: vi.fn(() => ({ stream: () => ({}) })) };
+    streamExportRows(rawConn);
+    expect(rawConn.query.mock.calls[0]).toHaveLength(1);
   });
 });

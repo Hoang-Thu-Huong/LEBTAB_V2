@@ -1,9 +1,8 @@
 import { escapeHtml } from '../utils/dom.js';
-import { formatNumber } from '../utils/format.js';
+import { DASH, formatNumber } from '../utils/format.js';
 import { isZusatz, summarizeIngredients } from '../utils/ingredients.js';
 
 const ZUSATZ_LABEL = 'Zusatz';
-const DASH = '–';
 
 function rowHtml(row) {
   const known = row.zutat !== null;

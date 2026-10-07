@@ -18,7 +18,11 @@
     <section id="filters"></section>
     <section class="toolbar">
       <span id="result-count" class="toolbar__count"></span>
-      <a id="btn-create" class="btn btn--primary toolbar__right" href="create.html" hidden>Neu anlegen</a>
+      <span class="toolbar__export">
+        <a class="link" href="/api/export?type=lebtab" title="Gesamte Tabelle lebtab: alle Produkte, 92 Spalten — unabhängig vom Filter" download>Alle Produkte (CSV)</a>
+        <a class="link" href="/api/export?type=c_zutab" title="Gesamte Tabelle c_zutab: alle Rezepturzeilen — unabhängig vom Filter" download>Alle Zutaten (CSV)</a>
+      </span>
+      <a id="btn-create" class="btn btn--primary toolbar__action" href="create.html" hidden>Neu anlegen</a>
     </section>
     <div id="message" class="message" hidden></div>
     <section id="products" class="table-wrap"></section>

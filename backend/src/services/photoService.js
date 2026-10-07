@@ -8,6 +8,7 @@ import { pool } from '../config/db.js';
 import { AppError } from '../utils/AppError.js';
 import { PHOTO_MAX_PER_PRODUCT } from '../utils/limits.js';
 import { isValidLmc } from '../utils/validators.js';
+import { productNotFound } from '../utils/productErrors.js';
 import {
   TMP_DIR,
   buildPhotoFilename,
@@ -129,7 +130,7 @@ async function runExclusive(key, task) {
  */
 export async function resolveLmc(lmc) {
   const storedLmc = isValidLmc(lmc) ? await lebtabModel.findStoredLmc(lmc, pool) : null;
-  if (storedLmc === null) throw new AppError(404, 'PRODUCT_NOT_FOUND', 'Produkt nicht gefunden');
+  if (storedLmc === null) throw productNotFound();
   return storedLmc;
 }
 

@@ -1,8 +1,6 @@
 import { escapeHtml } from '../utils/dom.js';
-import { formatDate, formatNumber } from '../utils/format.js';
+import { DASH, formatDate, formatNumber } from '../utils/format.js';
 import { PRODUCT_INFO_FIELDS } from '../utils/productFields.js';
-
-const DASH = '–';
 
 function valueHtml(field, value) {
   if (value === null || value === undefined || value === '') return DASH;

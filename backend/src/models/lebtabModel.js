@@ -5,6 +5,7 @@
  */
 import { BASIC_COLUMNS, CLASSIFICATION_COLUMNS, TECHNICAL_COLUMNS } from '../utils/productColumns.js';
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
+import { LEBTAB_EXPORT_COLUMNS } from '../utils/exportColumns.js';
 
 const LIST_COLUMNS = 'lebtab_lmc, lebtab_Bezeich, lebtab_Itemart, lebtab_Datum';
 
@@ -96,17 +97,6 @@ export async function findByLmc(lmc, { technicalColumns }, conn) {
 }
 
 /**
- * Existiert die Produktnummer? (HEAD #2b — ohne die 92 Spalten zu laden.) Kollation _ci: 'abc123' trifft 'ABC123'.
- * @param {string} lmc
- * @param {import('mysql2/promise').Pool | import('mysql2/promise').PoolConnection} conn
- * @returns {Promise<boolean>}
- */
-export async function exists(lmc, conn) {
-  const [rows] = await conn.query('SELECT 1 AS found FROM lebtab WHERE lebtab_lmc = ? LIMIT 1', [lmc]);
-  return rows.length > 0;
-}
-
-/**
  * Naehrwert-Zeilen mehrerer Codes mit EINER Abfrage (kein N+1) — fuer calculateNutrition (docs/SPEC.md 5.1).
  * Liefert auch die Zusatz-Codes (Itemart A): ihre Zeile ist der Marker-Vektor. Kollation _ci: 'afb000' trifft 'AFB000';
  * lebtab_lmc kommt so zurueck, wie es in der DB steht. Leere Liste -> keine Abfrage.
@@ -125,7 +115,7 @@ export async function findNutritionByLmcs(lmcs, conn) {
 
 /**
  * Produktnummer so, wie sie in der DB steht (Kollation _ci: 'a1ck00' trifft 'A1CK00') — fuer den Fotoordner
- * (docs/SPEC.md 5.8). Laedt bewusst nur diese eine Spalte.
+ * (docs/SPEC.md 5.8) und fuer HEAD #2b (Existenz, ohne die 92 Spalten zu laden). Laedt bewusst nur diese eine Spalte.
  * @param {string} lmc
  * @param {import('mysql2/promise').Pool | import('mysql2/promise').PoolConnection} conn
  * @returns {Promise<string | null>} null, wenn das Produkt nicht existiert
@@ -135,4 +125,17 @@ export async function findStoredLmc(lmc, conn) {
     lmc,
   ]);
   return rows.length > 0 ? rows[0].lebtab_lmc : null;
+}
+
+/**
+ * Alle Produkte als Zeilen-Stream fuer den CSV-Export (#12): genau die 92 Originalspalten, sortiert nach lebtab_lmc.
+ * Braucht die ROHE Verbindung (PoolConnection.connection) — nur deren query() liefert ein Objekt mit .stream();
+ * so liegt nie die ganze Tabelle im Speicher (docs/ARCHITECTURE.md 8.1).
+ * @param {import('mysql2').Connection} rawConn
+ * @returns {import('node:stream').Readable} objectMode: ein Zeilenobjekt je Produkt
+ */
+export function streamExportRows(rawConn) {
+  return rawConn
+    .query(`SELECT ${LEBTAB_EXPORT_COLUMNS.join(', ')} FROM lebtab ORDER BY lebtab_lmc`)
+    .stream();
 }

@@ -1,6 +1,6 @@
 import { pool } from '../config/db.js';
 import { getSchemaInfo } from '../config/schemaInfo.js';
-import { AppError } from '../utils/AppError.js';
+import { productNotFound } from '../utils/productErrors.js';
 import { parseListQuery } from '../utils/listQuery.js';
 import { isValidLmc } from '../utils/validators.js';
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
@@ -12,10 +12,6 @@ import {
 } from '../utils/productColumns.js';
 import * as lebtabModel from '../models/lebtabModel.js';
 import * as czutabModel from '../models/czutabModel.js';
-
-function productNotFound() {
-  return new AppError(404, 'PRODUCT_NOT_FOUND', 'Produkt nicht gefunden');
-}
 
 /**
  * Baut aus der flachen DB-Zeile die Antwort von #2: 13 Spalten an der Wurzel, nutrition{79}, ingredients,
@@ -73,5 +69,5 @@ export async function getProduct(lmc) {
  */
 export async function productExists(lmc) {
   if (!isValidLmc(lmc)) return false;
-  return lebtabModel.exists(lmc, pool);
+  return (await lebtabModel.findStoredLmc(lmc, pool)) !== null;
 }

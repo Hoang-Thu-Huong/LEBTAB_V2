@@ -71,6 +71,8 @@ a { color: var(--color-primary); }
 .muted { color: var(--color-muted); }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .toolbar__right { margin-left: auto; text-decoration: none; }
+.toolbar__export { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-1) var(--space-4); }
+.toolbar__action { text-decoration: none; }
 
 .input { font: inherit; padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); width: 100%; }
 .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); margin-bottom: var(--space-4); padding: var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); }

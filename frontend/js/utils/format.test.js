@@ -56,9 +56,10 @@ describe('salzFromNatrium', () => {
 
 describe('todayLocal', () => {
   it('uses local calendar date, not UTC', () => {
-    // 23:30 Ortszeit am 01.08.2026 — toISOString() waere in Deutschland (UTC+2) bereits der 02.08.
-    const d = new Date(2026, 7, 1, 23, 30, 0);
-    expect(todayLocal(d)).toBe('2026-08-01');
+    // 00:30 Ortszeit am 02.08.2026 — toISOString() liefert in Deutschland (UTC+2) noch den 01.08. (22:30 UTC).
+    // 23:30 waere KEIN Beweis: dann stimmen lokales und UTC-Datum ueberein.
+    const d = new Date(2026, 7, 2, 0, 30, 0);
+    expect(todayLocal(d)).toBe('2026-08-02');
   });
   it('pads month and day', () => {
     expect(todayLocal(new Date(2026, 0, 5))).toBe('2026-01-05');

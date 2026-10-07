@@ -6,7 +6,7 @@ vi.mock('../models/lebtabModel.js', () => ({
   findPage: vi.fn(),
   count: vi.fn(),
   findByLmc: vi.fn(),
-  exists: vi.fn(),
+  findStoredLmc: vi.fn(),
 }));
 vi.mock('../models/czutabModel.js', () => ({ findByLmcWithZutat: vi.fn() }));
 
@@ -121,13 +121,15 @@ describe('productService.getProduct', () => {
 });
 
 describe('productService.productExists', () => {
-  it('delegates to the model for a well-formed lmc', async () => {
-    lebtabModel.exists.mockResolvedValue(true);
-    expect(await productExists('A1CK00')).toBe(true);
-    expect(lebtabModel.exists).toHaveBeenCalledWith('A1CK00', POOL);
+  it('is true when the model finds the stored lmc, false when it returns null', async () => {
+    lebtabModel.findStoredLmc.mockResolvedValue('A1CK00');
+    expect(await productExists('a1ck00')).toBe(true);
+    expect(lebtabModel.findStoredLmc).toHaveBeenCalledWith('a1ck00', POOL);
+    lebtabModel.findStoredLmc.mockResolvedValue(null);
+    expect(await productExists('ZZZZZZ')).toBe(false);
   });
   it('is false for a malformed lmc without touching the DB', async () => {
     expect(await productExists('abc')).toBe(false);
-    expect(lebtabModel.exists).not.toHaveBeenCalled();
+    expect(lebtabModel.findStoredLmc).not.toHaveBeenCalled();
   });
 });
