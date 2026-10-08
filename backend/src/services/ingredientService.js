@@ -6,7 +6,7 @@
 import { pool } from '../config/db.js';
 import { getSchemaInfo } from '../config/schemaInfo.js';
 import { AppError } from '../utils/AppError.js';
-import { productNotFound } from '../utils/productErrors.js';
+import { productNotFound, ingredientRowNotFound } from '../utils/productErrors.js';
 import { INGREDIENT_MAX_PER_PRODUCT } from '../utils/limits.js';
 import { isValidLmc, parseIngredientId } from '../utils/validators.js';
 import { logger } from '../utils/logger.js';
@@ -109,7 +109,7 @@ async function resolveProductLmc(lmc, conn) {
 /** Zeile per id mit Sperre; muss zu :lmc gehoeren (docs/SPEC.md #8: kein Zugriff auf fremde Zeilen per geratener id). */
 async function lockOwnedRow(id, storedLmc, conn) {
   const row = await czutabModel.findByIdForUpdate(id, conn);
-  if (row === null || row.LMC.toLowerCase() !== storedLmc.toLowerCase()) throw productNotFound();
+  if (row === null || row.LMC.toLowerCase() !== storedLmc.toLowerCase()) throw ingredientRowNotFound();
   return row;
 }
 
@@ -173,8 +173,9 @@ export async function addIngredient(lmc, { LM_Zutat, Menge, confirmDuplicate }) 
  */
 export async function updateIngredient(lmc, idParam, { Menge }) {
   await requireMigration('001');
+  if (!isValidLmc(lmc)) throw productNotFound();
   const id = parseIngredientId(idParam);
-  if (!isValidLmc(lmc) || id === null) throw productNotFound();
+  if (id === null) throw ingredientRowNotFound();
   return runInTransaction(async (conn) => {
     const storedLmc = await resolveProductLmc(lmc, conn);
     await lockOwnedRow(id, storedLmc, conn);
@@ -196,8 +197,9 @@ export async function updateIngredient(lmc, idParam, { Menge }) {
  */
 export async function deleteIngredient(lmc, idParam) {
   await requireMigration('002');
+  if (!isValidLmc(lmc)) throw productNotFound();
   const id = parseIngredientId(idParam);
-  if (!isValidLmc(lmc) || id === null) throw productNotFound();
+  if (id === null) throw ingredientRowNotFound();
   return runInTransaction(async (conn) => {
     const storedLmc = await resolveProductLmc(lmc, conn);
     const row = await lockOwnedRow(id, storedLmc, conn);

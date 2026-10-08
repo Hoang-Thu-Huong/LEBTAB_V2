@@ -33,6 +33,10 @@ const app = createApp();
 const BASE = '/api/products/A1CK00/ingredients';
 const DB_ROW = { id: 540974, LMC: 'A1CK00', LM_Zutat: 'AFB000', Menge: 25, Version: 0, Anrcode: 0 };
 const JOINED = { ...DB_ROW, zutat: { lebtab_Bezeich: 'Joghurt', lebtab_Itemart: 'L' } };
+/** #8/#9: Zeile weg/fremd/id kaputt — Code bleibt PRODUCT_NOT_FOUND (SPEC 6.2), Text nennt die Zeile (DECISIONS #104). */
+const ROW_NOT_FOUND = {
+  code: 'PRODUCT_NOT_FOUND', message: 'Zutatenzeile nicht gefunden – bitte Seite neu laden', status: 404,
+};
 
 let conn;
 beforeEach(() => {
@@ -168,6 +172,16 @@ describe('PUT /api/products/:lmc/ingredients/:id (#8)', () => {
     expect((await request(app).put(`${BASE}/abc`).send({ Menge: 1 })).status).toBe(404);
     expect(czutabModel.updateMenge).not.toHaveBeenCalled();
   });
+
+  it('404 message names the recipe row, not the product (row gone, foreign, malformed id); unknown product keeps its text', async () => {
+    czutabModel.findByIdForUpdate.mockResolvedValue(null);
+    expect((await request(app).put(`${BASE}/540974`).send({ Menge: 1 })).body.error).toEqual(ROW_NOT_FOUND);
+    czutabModel.findByIdForUpdate.mockResolvedValue({ ...DB_ROW, LMC: 'B00000' });
+    expect((await request(app).put(`${BASE}/540974`).send({ Menge: 1 })).body.error).toEqual(ROW_NOT_FOUND);
+    expect((await request(app).put(`${BASE}/abc`).send({ Menge: 1 })).body.error).toEqual(ROW_NOT_FOUND);
+    lebtabModel.findStoredLmc.mockResolvedValue(null);
+    expect((await request(app).put(`${BASE}/540974`).send({ Menge: 1 })).body.error.message).toBe('Produkt nicht gefunden');
+  });
 });
 
 describe('DELETE /api/products/:lmc/ingredients/:id (#9)', () => {
@@ -193,5 +207,11 @@ describe('DELETE /api/products/:lmc/ingredients/:id (#9)', () => {
     expect((await request(app).delete(`${BASE}/540974`)).status).toBe(404);
     expect(archiveModel.insertIngredientArchive).not.toHaveBeenCalled();
     expect(conn.rollback).toHaveBeenCalled();
+  });
+
+  it('row already deleted (second tab, double click) -> 404 with the recipe-row message', async () => {
+    czutabModel.findByIdForUpdate.mockResolvedValue(null);
+    expect((await request(app).delete(`${BASE}/540974`)).body.error).toEqual(ROW_NOT_FOUND);
+    expect((await request(app).delete(`${BASE}/0`)).body.error).toEqual(ROW_NOT_FOUND);
   });
 });
