@@ -171,3 +171,20 @@ export async function insert(row, conn) {
   const values = INSERT_COLUMNS.map((column) => row[column]);
   await conn.query(`INSERT INTO lebtab (${INSERT_COLUMNS.join(', ')}) VALUES (?)`, [values]);
 }
+
+/**
+ * Markiert die Naehrwerte als veraltet (#7, #8, #9 — docs/SPEC.md 5.2): NUR dieses Flag, nie _row_version
+ * (docs/SPEC.md 5.6: Zutaten-Endpunkte erhoehen die Version nicht). Idempotent.
+ * Relies on mysql2 default flag FOUND_ROWS: affectedRows = matched rows, even if the value was already 1 —
+ * 0 therefore means the product no longer exists.
+ * @param {string} lmc
+ * @param {import('mysql2/promise').PoolConnection} conn Transaktions-Connection
+ * @returns {Promise<number>} affectedRows (0 = Produkt existiert nicht mehr)
+ */
+export async function setNutritionStale(lmc, conn) {
+  const [result] = await conn.query(
+    'UPDATE lebtab SET lebtab_nutrition_stale = 1 WHERE lebtab_lmc = ?',
+    [lmc],
+  );
+  return result.affectedRows;
+}

@@ -30,3 +30,14 @@ export function isValidYmd(value) {
 export function parseIntStrict(value) {
   return typeof value === 'string' && INT_PATTERN.test(value) ? Number(value) : null;
 }
+
+/** c_zutab.id aus der URL (#8, #9): nur Ziffern im Bereich INT UNSIGNED (1 … 4294967295); alles andere -> null. */
+const ID_PATTERN = /^\d{1,10}$/;
+const ID_MAX = 4294967295;
+
+/** @param {unknown} value @returns {number|null} */
+export function parseIngredientId(value) {
+  if (typeof value !== 'string' || !ID_PATTERN.test(value)) return null;
+  const id = Number(value);
+  return id >= 1 && id <= ID_MAX ? id : null;
+}

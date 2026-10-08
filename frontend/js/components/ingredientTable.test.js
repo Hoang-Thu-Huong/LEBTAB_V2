@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { renderIngredientTable, updateIngredientSum } from './ingredientTable.js';
+import { renderIngredientTable, updateIngredientSum, setIngredientRowError } from './ingredientTable.js';
 
 const dbRow = (id, LM_Zutat, Menge, itemart) => ({
   id, LMC: 'P00001', LM_Zutat, Menge, Version: 3, Anrcode: 0,
@@ -133,5 +133,78 @@ describe('renderIngredientTable — local (create)', () => {
     updateIngredientSum(c, [localRow(1, 'L00001', '80', 80)]);
     expect(c.sum.classes.has('sum-warn')).toBe(true);
     expect(c.warn.hidden).toBe(false);
+  });
+});
+
+describe('renderIngredientTable — remote (edit, Phase 7)', () => {
+  const remoteRow = (id, LM_Zutat, Menge, itemart, Anrcode = 0) => ({
+    ...dbRow(id, LM_Zutat, Menge, itemart), Anrcode, mengeText: String(Menge),
+  });
+  const rows = [remoteRow(1, 'L00001', 60, 'L'), remoteRow(2, 'X00001', 0, null), remoteRow(3, 'JVB100', 210, 'A', 2)];
+
+  it('renders every row (also Menge 0 and unknown) with Menge input keyed by id, Anrcode read-only, link for known codes', () => {
+    const c = fakeContainer();
+    renderIngredientTable(c, { rows, mode: 'remote' }, { onMengeInput: vi.fn(), onMengeCommit: vi.fn(), onRemove: vi.fn() });
+    expect(c.innerHTML.match(/class="input input--menge/g)).toHaveLength(3);
+    expect(c.innerHTML).toContain('data-id="2" value="0"');
+    expect(c.innerHTML).not.toContain('data-tmp-id');
+    expect(c.innerHTML).toContain('href="detail.html?lmc=L00001"');
+    expect(c.innerHTML).toContain('unbekannt');
+    expect(c.innerHTML).toContain('<th class="num">Anrcode</th>');
+    expect(c.innerHTML).toContain('<td class="num">2</td>');
+    expect(c.innerHTML.match(/data-action="remove"/g)).toHaveLength(3);
+    expect(c.innerHTML).toContain('<strong id="menge-sum" class="sum-warn">60 g</strong>'); // unbekannt zaehlt mit, Zusatz nicht
+    expect(c.innerHTML).not.toContain('ausgeblendet');
+  });
+
+  it('canDelete false (no migration 002) -> no Entfernen button + hint; empty recipe -> hint to use the search', () => {
+    const c = fakeContainer();
+    renderIngredientTable(c, { rows, mode: 'remote', canDelete: false }, {});
+    expect(c.innerHTML).not.toContain('data-action="remove"');
+    expect(c.innerHTML).toContain('Löschen von Zutaten erst nach Datenbank-Migration 002 möglich.');
+    renderIngredientTable(c, { rows: [], mode: 'remote' }, {});
+    expect(c.innerHTML).toContain('Keine Rezeptur hinterlegt.');
+    expect(c.innerHTML).toContain('Zutaten über die Suche hinzufügen.');
+    expect(c.innerHTML).not.toContain('menge-sum');
+  });
+
+  it('reports input (while typing), commit (change / Enter -> blur) and remove with the c_zutab id', () => {
+    const c = fakeContainer();
+    const onMengeInput = vi.fn();
+    const onMengeCommit = vi.fn();
+    const onRemove = vi.fn();
+    renderIngredientTable(c, { rows, mode: 'remote' }, { onMengeInput, onMengeCommit, onRemove });
+    const input = { dataset: { id: '2' }, value: '12,5', classList: { remove: vi.fn() } };
+    c.oninput(eventOn('.input--menge', input));
+    expect(onMengeInput).toHaveBeenCalledWith(2, '12,5');
+    c.onchange(eventOn('.input--menge', input));
+    expect(onMengeCommit).toHaveBeenCalledWith(2, '12,5');
+    const blur = vi.fn();
+    const preventDefault = vi.fn();
+    c.onkeydown({ key: 'Enter', preventDefault, target: { closest: (s) => (s === '.input--menge' ? input : null), blur } });
+    expect(blur).toHaveBeenCalled();
+    expect(preventDefault).toHaveBeenCalled();
+    c.onclick(eventOn('[data-action="remove"]', { dataset: { id: '3' } }));
+    expect(onRemove).toHaveBeenCalledWith(3);
+  });
+
+  it('setIngredientRowError marks one cell without re-rendering; updateIngredientSum works for remote rows', () => {
+    const c = fakeContainer();
+    renderIngredientTable(c, { rows, mode: 'remote' }, {});
+    const before = c.innerHTML;
+    const note = { textContent: '', hidden: true };
+    const input = { classList: { toggle: vi.fn() }, parentElement: { querySelector: () => note } };
+    const parts = { '.input--menge[data-id="2"]': input, '#menge-sum': c.sum, '.sum-warn-note': c.warn };
+    c.querySelector = (s) => parts[s] ?? null;
+    setIngredientRowError(c, 2, 'muss eine Zahl ≥ 0 sein');
+    expect(input.classList.toggle).toHaveBeenCalledWith('is-invalid', true);
+    expect(note).toEqual({ textContent: 'muss eine Zahl ≥ 0 sein', hidden: false });
+    setIngredientRowError(c, 2, null);
+    expect(note).toEqual({ textContent: '', hidden: true });
+    setIngredientRowError(c, 99, 'x'); // unbekannte Zeile: kein Fehler
+    expect(c.innerHTML).toBe(before);
+    updateIngredientSum(c, [remoteRow(1, 'L00001', 40, 'L'), remoteRow(2, 'X00001', 60, null)]);
+    expect(c.sum.textContent).toBe('100 g');
+    expect(c.warn.hidden).toBe(true);
   });
 });

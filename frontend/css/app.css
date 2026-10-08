@@ -133,3 +133,14 @@ a { color: var(--color-primary); }
 .picker__name { flex: 1; }
 .input--menge { width: 120px; text-align: right; }
 .btn--small { padding: var(--space-1) var(--space-2); font-size: 12px; }
+
+/* Phase 7: Rezeptur bearbeiten — Banner "Nährwerte nicht aktuell", Zeile "neue Zutat" (docs/ARCHITECTURE.md 7.5) */
+.banner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); margin-bottom: var(--space-3); }
+.banner--warn { background: var(--color-warn-bg); border-color: #e0b84a; }
+.banner__text { flex: 1 1 320px; }
+.banner__action { white-space: nowrap; }
+.editor__banner { margin-bottom: var(--space-3); }
+.editor__message { margin-top: var(--space-3); }
+.pending { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); padding: var(--space-3); margin-bottom: var(--space-3); background: var(--color-bg); border: 1px dashed var(--color-border); border-radius: var(--radius); }
+.pending__name { flex: 1 1 200px; }
+.pending__field { flex: 0 0 auto; }

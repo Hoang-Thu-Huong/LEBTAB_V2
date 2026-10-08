@@ -76,6 +76,18 @@ export function validateProductForm(form, itemarts = []) {
 }
 
 /**
+ * Prueft den Text eines Menge-Felds: leer -> 'Menge fehlt', keine Zahl oder negativ -> 'muss eine Zahl ≥ 0 sein'
+ * (DECISIONS #87: negative Mengen werden schon im Frontend abgewiesen). 0 ist gueltig.
+ * @param {string} mengeText Text im Eingabefeld
+ * @param {number|null} menge parseDecimal(mengeText)
+ * @returns {string|null} Meldung oder null, wenn gueltig
+ */
+export function validateMengeText(mengeText, menge) {
+  if (text(mengeText) === '') return ISSUE_MENGE_MISSING;
+  return Number.isFinite(menge) && menge >= 0 ? null : ISSUE_MENGE;
+}
+
+/**
  * Prueft die lokalen Zutatenzeilen: Menge vorhanden, Zahl >= 0 (0 ist erlaubt), Zutat != Produkt selbst.
  * @param {Array<{tmpId: number, LM_Zutat: string, mengeText: string, Menge: number|null}>} rows
  * @param {string} [lmc] Nummer des Produkts, das gerade angelegt wird
@@ -85,9 +97,9 @@ export function validateIngredients(rows, lmc = '') {
   const errors = {};
   const own = text(lmc).toLowerCase();
   for (const row of rows) {
-    if (own !== '' && row.LM_Zutat.toLowerCase() === own) errors[row.tmpId] = ISSUE_SELF;
-    else if (text(row.mengeText) === '') errors[row.tmpId] = ISSUE_MENGE_MISSING;
-    else if (!Number.isFinite(row.Menge) || row.Menge < 0) errors[row.tmpId] = ISSUE_MENGE;
+    const self = own !== '' && row.LM_Zutat.toLowerCase() === own;
+    const issue = self ? ISSUE_SELF : validateMengeText(row.mengeText, row.Menge);
+    if (issue) errors[row.tmpId] = issue;
   }
   return errors;
 }

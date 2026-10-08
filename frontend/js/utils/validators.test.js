@@ -5,6 +5,7 @@ import {
   validateIngredients,
   findDuplicateLmZutat,
   parseDetailField,
+  validateMengeText,
 } from './validators.js';
 import { emptyProductForm } from './productForm.js';
 
@@ -99,5 +100,16 @@ describe('findDuplicateLmZutat / parseDetailField', () => {
     expect(parseDetailField('ingredients[0].LM_Zutat')).toEqual({ index: 0, key: 'LM_Zutat' });
     expect(parseDetailField('lebtab_Bezeich')).toEqual({ key: 'lebtab_Bezeich' });
     expect(parseDetailField('ingredients')).toEqual({ key: 'ingredients' });
+  });
+});
+
+describe('validateMengeText (Phase 7, edit)', () => {
+  it('empty -> "Menge fehlt"; NaN/negative -> "muss eine Zahl ≥ 0 sein"; 0 and decimals valid', () => {
+    expect(validateMengeText('', null)).toBe('Menge fehlt');
+    expect(validateMengeText('   ', null)).toBe('Menge fehlt');
+    expect(validateMengeText('abc', null)).toBe('muss eine Zahl ≥ 0 sein');
+    expect(validateMengeText('-1', -1)).toBe('muss eine Zahl ≥ 0 sein');
+    expect(validateMengeText('0', 0)).toBeNull();
+    expect(validateMengeText('12,5', 12.5)).toBeNull();
   });
 });

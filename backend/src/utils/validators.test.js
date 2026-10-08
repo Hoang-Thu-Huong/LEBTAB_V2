@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isValidLmc, isValidItemart, isValidYmd, parseIntStrict } from './validators.js';
+import { isValidLmc, isValidItemart, isValidYmd, parseIntStrict, parseIngredientId } from './validators.js';
 
 describe('isValidLmc', () => {
   it('accepts exactly 6 alphanumeric characters', () => {
@@ -44,6 +44,19 @@ describe('parseIntStrict', () => {
   it('returns null for 1e2, 0x10, 1.0, signs, blanks, too long, non-strings', () => {
     for (const v of ['1e2', '0x10', '1.0', '-1', '+1', ' 1', '', '1234567890', 5, null, undefined, ['1']]) {
       expect(parseIntStrict(v)).toBeNull();
+    }
+  });
+});
+
+describe('parseIngredientId (Phase 7)', () => {
+  it('parses plain digit strings within INT UNSIGNED', () => {
+    expect(parseIngredientId('1')).toBe(1);
+    expect(parseIngredientId('540973')).toBe(540973);
+    expect(parseIngredientId('4294967295')).toBe(4294967295);
+  });
+  it('returns null for 0, 4294967296, 1e3, -1, 1.0, blanks, empty, non-strings', () => {
+    for (const v of ['0', '4294967296', '1e3', '-1', '1.0', ' 1', '', '12345678901', 5, null, undefined]) {
+      expect(parseIngredientId(v)).toBeNull();
     }
   });
 });

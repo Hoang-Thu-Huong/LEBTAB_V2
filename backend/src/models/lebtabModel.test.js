@@ -9,6 +9,7 @@ import {
   findStoredLmcs,
   insert,
   streamExportRows,
+  setNutritionStale,
 } from './lebtabModel.js';
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
 import { LEBTAB_EXPORT_COLUMNS } from '../utils/exportColumns.js';
@@ -187,5 +188,15 @@ describe('insert (Phase 6)', () => {
     delete r.lebtab_V_B1;
     await expect(insert(r, conn)).rejects.toThrow(/lebtab_V_B1/);
     expect(conn.query).not.toHaveBeenCalled();
+  });
+});
+
+describe('setNutritionStale (Phase 7)', () => {
+  it('sets only lebtab_nutrition_stale = 1 by lmc — never _row_version — and returns affectedRows', async () => {
+    const conn = fakeConn({ affectedRows: 1 });
+    expect(await setNutritionStale('A1CK00', conn)).toBe(1);
+    expect(sqlOf(conn)).toBe('UPDATE lebtab SET lebtab_nutrition_stale = 1 WHERE lebtab_lmc = ?');
+    expect(sqlOf(conn)).not.toContain('_row_version');
+    expect(paramsOf(conn)).toEqual(['A1CK00']);
   });
 });

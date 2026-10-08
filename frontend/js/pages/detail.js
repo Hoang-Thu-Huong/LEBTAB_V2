@@ -5,11 +5,13 @@ import { checkPhotoSelection, uploadSuccessText } from '../utils/photos.js';
 import { renderProductInfo } from '../components/productInfo.js';
 import { renderNutritionTable } from '../components/nutritionTable.js';
 import { renderIngredientTable } from '../components/ingredientTable.js';
+import { renderStaleBanner } from '../components/staleBanner.js';
 import { renderPhotoGallery } from '../components/photoGallery.js';
 import { confirmDialog } from '../components/confirmDialog.js';
 import { showError, showLoading, showSuccess, clearMessage } from '../components/message.js';
 
-// Phase 4: Fotos. Stale-Banner (Phase 7), Bemerkung (8), Loeschen (9) kommen spaeter dazu.
+// Phase 4: Fotos. Phase 7: Stale-Banner (nur Warnung — der Button "Neu berechnen" liegt auf edit.html, 7.3).
+// Bemerkung (Phase 8) und Loeschen (Phase 9) kommen spaeter dazu.
 const state = { lmc: getLmcFromUrl(), product: null, meta: null, photos: [], photosBusy: false };
 
 async function load() {
@@ -39,6 +41,7 @@ function render() {
   editLink.href = 'edit.html?lmc=' + encodeURIComponent(p.lebtab_lmc);
   editLink.hidden = !state.meta.features.technicalColumns; // 7.9
 
+  renderStaleBanner($('#stale'), { stale: p.lebtab_nutrition_stale }); // docs/SPEC.md 5.2: nur Hinweis
   renderProductInfo($('#info'), { product: p });
   renderIngredientTable($('#ingredients'), { rows: p.ingredients, mode: 'readonly' }, {});
   renderNutritionTable($('#nutrition'), { nutrition: p.nutrition, meta: state.meta });

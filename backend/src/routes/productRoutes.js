@@ -3,6 +3,7 @@ import { listProducts, getProduct, headProduct, createProduct } from '../control
 import { validateRequest } from '../middlewares/validateRequest.js';
 import { parseCreateProductBody } from '../utils/productPayload.js';
 import { photoRoutes } from './photoRoutes.js';
+import { ingredientRoutes } from './ingredientRoutes.js';
 
 export const productRoutes = Router();
 productRoutes.get('/', listProducts);
@@ -11,3 +12,4 @@ productRoutes.post('/', validateRequest(parseCreateProductBody), createProduct);
 productRoutes.head('/:lmc', headProduct);
 productRoutes.get('/:lmc', getProduct);
 productRoutes.use('/:lmc/photos', photoRoutes); // #14, #15, #16
+productRoutes.use('/:lmc/ingredients', ingredientRoutes); // #7, #8, #9

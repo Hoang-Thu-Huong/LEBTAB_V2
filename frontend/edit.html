@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LEBTAB — Bearbeiten</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="topbar__title">LEBTAB Eingabemaske</h1>
+    <nav class="topbar__nav">
+      <a href="index.html" class="topbar__link">Produkte</a>
+    </nav>
+  </header>
+
+  <main id="page" class="page">
+    <section class="page-header">
+      <a id="back-link" class="link" href="index.html">‹ Zur Produktseite</a>
+      <h2 id="product-title" class="page-header__title">Bearbeiten</h2>
+    </section>
+    <div id="message" class="message" hidden></div>
+    <div id="content" hidden>
+      <section class="card">
+        <h3 class="card__title">Stammdaten</h3>
+        <div id="info"></div>
+        <p class="note muted">Stammdaten können hier noch nicht bearbeitet werden.</p>
+      </section>
+      <section class="card">
+        <h3 class="card__title">Zutaten</h3>
+        <p class="note muted">Änderungen an der Rezeptur werden sofort gespeichert. Die Nährwerte werden dabei nicht neu berechnet.</p>
+        <div id="editor"></div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="js/pages/edit.js"></script>
+</body>
+</html>
