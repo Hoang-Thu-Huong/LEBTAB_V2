@@ -6,8 +6,8 @@ const BUTTON_LABEL = 'Neu berechnen & speichern';
 
 /**
  * Banner "Nährwerte nicht aktuell" (docs/SPEC.md 5.2, docs/ARCHITECTURE.md 7.3/7.5). Reine Render-Funktion.
- * detail.html zeigt nur die Warnung; auf edit.html kommt in Phase 8 der Button "Neu berechnen & speichern"
- * (canRecalculate) dazu — Phase 7 zeigt ihn nie, weil Endpunkt #6 noch nicht existiert.
+ * detail.html zeigt nur die Warnung; edit.html zeigt zusaetzlich den Button "Neu berechnen & speichern"
+ * (canRecalculate, Endpunkte #17/#6).
  * @param {HTMLElement} container
  * @param {{stale: number, canRecalculate?: boolean, busy?: boolean}} props stale = lebtab_nutrition_stale (0/1)
  * @param {{onRecalculate?: () => void}} [handlers]

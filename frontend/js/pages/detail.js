@@ -8,10 +8,17 @@ import { renderIngredientTable } from '../components/ingredientTable.js';
 import { renderStaleBanner } from '../components/staleBanner.js';
 import { renderPhotoGallery } from '../components/photoGallery.js';
 import { confirmDialog } from '../components/confirmDialog.js';
+import { conflictDialog } from '../components/conflictDialog.js';
+import {
+  renderBemerkungBox,
+  setBemerkungBusy,
+  bemerkungMessage,
+  setBemerkungText,
+} from '../components/bemerkungBox.js';
 import { showError, showLoading, showSuccess, clearMessage } from '../components/message.js';
 
 // Phase 4: Fotos. Phase 7: Stale-Banner (nur Warnung — der Button "Neu berechnen" liegt auf edit.html, 7.3).
-// Bemerkung (Phase 8) und Loeschen (Phase 9) kommen spaeter dazu.
+// Phase 8: Bemerkung (docs/SPEC.md 5.10). Loeschen (Phase 9) kommt spaeter dazu.
 const state = { lmc: getLmcFromUrl(), product: null, meta: null, photos: [], photosBusy: false };
 
 async function load() {
@@ -43,9 +50,52 @@ function render() {
 
   renderStaleBanner($('#stale'), { stale: p.lebtab_nutrition_stale }); // docs/SPEC.md 5.2: nur Hinweis
   renderProductInfo($('#info'), { product: p });
+  renderBemerkungBox(
+    $('#bemerkung'),
+    {
+      text: p.lebtab_bemerkung ?? '',
+      readonly: !state.meta.features.technicalColumns,
+      maxLength: state.meta.limits.bemerkungMaxLength,
+    },
+    { onSave: saveBemerkung },
+  );
   renderIngredientTable($('#ingredients'), { rows: p.ingredients, mode: 'readonly' }, {});
   renderNutritionTable($('#nutrition'), { nutrition: p.nutrition, meta: state.meta });
   $('#content').hidden = false;
+}
+
+// #4 mit nur { lebtab_bemerkung, _row_version } (docs/SPEC.md 5.10). Keine Rueckfrage (5.9); render() wird NICHT
+// aufgerufen — das Textfeld bleibt, wie es ist (Regel 4). 409: der getippte Text bleibt (Entscheidung 08/10/2026).
+async function saveBemerkung(text) {
+  const box = $('#bemerkung');
+  clearMessage(bemerkungMessage(box));
+  setBemerkungBusy(box, true);
+  try {
+    const trimmed = text.trim();
+    const res = await api.updateProduct(state.product.lebtab_lmc, {
+      lebtab_bemerkung: trimmed === '' ? null : trimmed,
+      _row_version: state.product._row_version,
+    });
+    state.product = { ...state.product, ...res }; // #4 liefert keine ingredients — die bisherigen bleiben
+    showSuccess(bemerkungMessage(box), 'Bemerkung gespeichert');
+  } catch (err) {
+    if (err.code !== 'VERSION_CONFLICT') showError(bemerkungMessage(box), err);
+    else if (await conflictDialog({ kind: 'bemerkung', current: err.current })) await reloadKeepingBemerkung(text);
+    else showError(bemerkungMessage(box), err);
+  } finally {
+    setBemerkungBusy($('#bemerkung'), false);
+  }
+}
+
+// "Neu laden" nach 409: Produkt neu laden und zeichnen, danach den getippten Text wieder ins Feld setzen.
+async function reloadKeepingBemerkung(text) {
+  try {
+    state.product = await api.getProduct(state.lmc);
+    render();
+    setBemerkungText($('#bemerkung'), text, state.meta.limits.bemerkungMaxLength);
+  } catch (err) {
+    showError($('#message'), err);
+  }
 }
 
 // Fotos werden NACH dem Produkt und getrennt geladen (DECISIONS #80): ein Fehler im Upload-Verzeichnis

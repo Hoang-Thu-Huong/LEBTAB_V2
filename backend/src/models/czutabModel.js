@@ -69,6 +69,20 @@ export async function findByIdForUpdate(id, conn) {
 }
 
 /**
+ * Sperrt ALLE Rezepturzeilen eines Produkts (FOR UPDATE, ueber den Index auf LMC auch gegen neue Zeilen) — fuer #6:
+ * zwischen Lesen der Rezeptur und Schreiben der Naehrwerte darf niemand eine Zeile aendern. Gleiche Sperr-Reihenfolge
+ * wie #7–#9 (erst c_zutab, dann lebtab). Liest bewusst nur id, ohne JOIN: ein FOR UPDATE ueber den JOIN wuerde auch
+ * die lebtab-Zeilen der Zutaten sperren.
+ * @param {string} lmc
+ * @param {import('mysql2/promise').PoolConnection} conn Transaktions-Connection
+ * @returns {Promise<number>} Anzahl gesperrter Zeilen
+ */
+export async function lockByLmc(lmc, conn) {
+  const [rows] = await conn.query('SELECT id FROM c_zutab WHERE LMC = ? FOR UPDATE', [lmc]);
+  return rows.length;
+}
+
+/**
  * Vorhandene Zeilen desselben Paars (LMC, LM_Zutat) — Grundlage der weichen Dubletten-Warnung (#7, docs/SPEC.md 5.3).
  * Kollation _ci: 'afb000' trifft 'AFB000'. Altdaten koennen mehrere Treffer haben (2.300 doppelte Paare).
  * @param {string} lmc

@@ -10,10 +10,12 @@ import {
   insert,
   streamExportRows,
   setNutritionStale,
+  updateColumns,
+  updateNutrition,
 } from './lebtabModel.js';
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
 import { LEBTAB_EXPORT_COLUMNS } from '../utils/exportColumns.js';
-import { TECHNICAL_COLUMNS } from '../utils/productColumns.js';
+import { TECHNICAL_COLUMNS, UPDATABLE_COLUMNS } from '../utils/productColumns.js';
 
 const fakeConn = (rows) => ({ query: vi.fn().mockResolvedValue([rows]) });
 const NO_FILTERS = { search: null, itemarts: null, datumFrom: null, datumTo: null };
@@ -198,5 +200,55 @@ describe('setNutritionStale (Phase 7)', () => {
     expect(sqlOf(conn)).toBe('UPDATE lebtab SET lebtab_nutrition_stale = 1 WHERE lebtab_lmc = ?');
     expect(sqlOf(conn)).not.toContain('_row_version');
     expect(paramsOf(conn)).toEqual(['A1CK00']);
+  });
+});
+
+describe('updateColumns (Phase 8, PUT #4)', () => {
+  it('sets only the given columns, bumps _row_version and checks the client version in WHERE', async () => {
+    const conn = fakeConn({ affectedRows: 1 });
+    const n = await updateColumns('A1CK00', { lebtab_Bezeich: 'Neu', lebtab_Marke: null }, 4, conn);
+    expect(n).toBe(1);
+    expect(sqlOf(conn)).toBe(
+      'UPDATE lebtab SET lebtab_Bezeich = ?, lebtab_Marke = ?, _row_version = _row_version + 1 WHERE lebtab_lmc = ? AND _row_version = ?',
+    );
+    expect(paramsOf(conn)).toEqual(['Neu', null, 'A1CK00', 4]);
+  });
+
+  it('accepts every whitelist column (13) and returns 0 when nothing matched', async () => {
+    const changes = Object.fromEntries(UPDATABLE_COLUMNS.map((column) => [column, null]));
+    const conn = fakeConn({ affectedRows: 0 });
+    expect(await updateColumns('A1CK00', changes, 1, conn)).toBe(0);
+    expect(paramsOf(conn)).toHaveLength(15);
+  });
+
+  it('refuses a column outside the whitelist or an empty change set (programming error, no query)', async () => {
+    const conn = fakeConn({ affectedRows: 1 });
+    await expect(updateColumns('A1CK00', { lebtab_EW: 1 }, 1, conn)).rejects.toThrow(TypeError);
+    await expect(updateColumns('A1CK00', { lebtab_lmc: 'X' }, 1, conn)).rejects.toThrow(TypeError);
+    await expect(updateColumns('A1CK00', { '_row_version = 99, lebtab_Bezeich': 'x' }, 1, conn)).rejects.toThrow(TypeError);
+    await expect(updateColumns('A1CK00', {}, 1, conn)).rejects.toThrow(TypeError);
+    expect(conn.query).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateNutrition (Phase 8, #6)', () => {
+  const NUTRITION = Object.fromEntries(NUTRITION_COLUMNS.map((column, i) => [column, i === 0 ? null : i]));
+
+  it('writes all 79 columns in NUTRITION_COLUMNS order, stale = 0, _row_version + 1, version check in WHERE', async () => {
+    const conn = fakeConn({ affectedRows: 1 });
+    expect(await updateNutrition('DQCO00', NUTRITION, 7, conn)).toBe(1);
+    const sql = sqlOf(conn);
+    expect(sql.startsWith(`UPDATE lebtab SET ${NUTRITION_COLUMNS[0]} = ?, ${NUTRITION_COLUMNS[1]} = ?`)).toBe(true);
+    expect(sql.endsWith(
+      'lebtab_nutrition_stale = 0, _row_version = _row_version + 1 WHERE lebtab_lmc = ? AND _row_version = ?',
+    )).toBe(true);
+    expect(paramsOf(conn)).toEqual([...NUTRITION_COLUMNS.map((column) => NUTRITION[column]), 'DQCO00', 7]);
+  });
+
+  it('a missing nutrition key is a programming error (never silently NULL)', async () => {
+    const { [NUTRITION_COLUMNS[5]]: _dropped, ...incomplete } = NUTRITION;
+    const conn = fakeConn({ affectedRows: 1 });
+    await expect(updateNutrition('DQCO00', incomplete, 1, conn)).rejects.toThrow(NUTRITION_COLUMNS[5]);
+    expect(conn.query).not.toHaveBeenCalled();
   });
 });

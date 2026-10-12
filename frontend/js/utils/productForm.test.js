@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { emptyProductForm, buildCreatePayload, isFormDirty } from './productForm.js';
+import { emptyProductForm, buildCreatePayload, isFormDirty, productToForm, buildUpdatePayload, isInfoFormDirty } from './productForm.js';
 import { PRODUCT_INFO_FIELDS } from './productFields.js';
 
 const TODAY = '2026-10-06';
@@ -41,5 +41,41 @@ describe('isFormDirty', () => {
     expect(isFormDirty({ ...form, lebtab_lmc: 'A' }, [], TODAY)).toBe(true);
     expect(isFormDirty({ ...form, lebtab_Itemart: 'L' }, [], TODAY)).toBe(true);
     expect(isFormDirty(form, [{ tmpId: 1 }], TODAY)).toBe(true);
+  });
+});
+
+describe('edit.html Stammdaten (Phase 8): productToForm, buildUpdatePayload, isInfoFormDirty', () => {
+  const PRODUCT = {
+    lebtab_lmc: 'DQCO00', lebtab_Bezeich: 'Aufstrich', lebtab_Marke: null, lebtab_Version: 3, lebtab_Itemart: 'V',
+    lebtab_Datum: '2013-05-10', lebtab_aktuell: 1, lebtab_lmgruppe: 0, lebtab_gruppename: null, lebtab_source: null,
+    lebtab_source_code: null, lebtab_source_detail: null, lebtab_probiotisch: null, lebtab_bemerkung: 'Notiz',
+    _row_version: 4, nutrition: {},
+  };
+
+  it('productToForm: 13 string fields, null -> empty, 0 stays "0"; no technical keys', () => {
+    const form = productToForm(PRODUCT);
+    expect(Object.keys(form)).toHaveLength(13);
+    expect(form).toMatchObject({ lebtab_lmc: 'DQCO00', lebtab_Marke: '', lebtab_Version: '3', lebtab_lmgruppe: '0' });
+    expect(form).not.toHaveProperty('lebtab_bemerkung');
+  });
+
+  it('buildUpdatePayload: 12 columns without lmc and without Bemerkung, empty -> explicit null, ints as numbers, + _row_version', () => {
+    const form = { ...productToForm(PRODUCT), lebtab_Marke: ' Alnatura ', lebtab_Version: '', lebtab_aktuell: '2' };
+    const payload = buildUpdatePayload(form, 4);
+    expect(Object.keys(payload)).toHaveLength(13);
+    expect(payload).not.toHaveProperty('lebtab_lmc');
+    expect(payload).not.toHaveProperty('lebtab_bemerkung');
+    expect(payload).toMatchObject({
+      lebtab_Bezeich: 'Aufstrich', lebtab_Marke: 'Alnatura', lebtab_Version: null, lebtab_aktuell: 2,
+      lebtab_gruppename: null, _row_version: 4,
+    });
+  });
+
+  it('isInfoFormDirty: false right after loading and for edge spaces only; true after a real change', () => {
+    const form = productToForm(PRODUCT);
+    expect(isInfoFormDirty(form, PRODUCT)).toBe(false);
+    expect(isInfoFormDirty({ ...form, lebtab_Bezeich: ' Aufstrich ' }, PRODUCT)).toBe(false);
+    expect(isInfoFormDirty({ ...form, lebtab_Marke: 'X' }, PRODUCT)).toBe(true);
+    expect(isInfoFormDirty({ ...form, lebtab_lmgruppe: '' }, PRODUCT)).toBe(true);
   });
 });

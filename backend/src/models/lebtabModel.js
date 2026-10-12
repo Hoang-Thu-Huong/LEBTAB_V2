@@ -3,7 +3,12 @@
  * (docs/ARCHITECTURE.md 3.2). NIE SELECT * (docs/DATA.md 4.0): physisch heissen 5 Spalten klein.
  * Dynamisch sind nur feste SQL-Fragmente und Spaltenlisten aus Konstanten — Werte immer als ?-Parameter.
  */
-import { BASIC_COLUMNS, CLASSIFICATION_COLUMNS, TECHNICAL_COLUMNS } from '../utils/productColumns.js';
+import {
+  BASIC_COLUMNS,
+  CLASSIFICATION_COLUMNS,
+  TECHNICAL_COLUMNS,
+  UPDATABLE_COLUMNS,
+} from '../utils/productColumns.js';
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
 import { LEBTAB_EXPORT_COLUMNS } from '../utils/exportColumns.js';
 
@@ -185,6 +190,51 @@ export async function setNutritionStale(lmc, conn) {
   const [result] = await conn.query(
     'UPDATE lebtab SET lebtab_nutrition_stale = 1 WHERE lebtab_lmc = ?',
     [lmc],
+  );
+  return result.affectedRows;
+}
+
+/**
+ * PUT #4 (docs/SPEC.md 6.1, 5.6): setzt die uebergebenen Spalten der Whitelist und erhoeht _row_version um 1 —
+ * nur, wenn _row_version noch dem Stand des Clients entspricht (optimistische Sperre). Spaltennamen kommen aus
+ * UPDATABLE_COLUMNS (nie aus req.body); ein anderer Schluessel ist ein Programmierfehler.
+ * @param {string} lmc
+ * @param {Record<string, string|number|null>} changes 1..13 Spalten aus parseUpdateProductBody
+ * @param {number} rowVersion Stand des Clients
+ * @param {import('mysql2/promise').Pool | import('mysql2/promise').PoolConnection} conn
+ * @returns {Promise<number>} affectedRows: 1 = gespeichert, 0 = Produkt fehlt oder Version passt nicht
+ */
+export async function updateColumns(lmc, changes, rowVersion, conn) {
+  const columns = Object.keys(changes);
+  const unknown = columns.filter((column) => !UPDATABLE_COLUMNS.includes(column));
+  if (columns.length === 0 || unknown.length > 0) {
+    throw new TypeError(`lebtabModel.updateColumns: ungueltige Spalten [${unknown.join(', ')}]`);
+  }
+  const [result] = await conn.query(
+    `UPDATE lebtab SET ${columns.map((column) => `${column} = ?`).join(', ')}, _row_version = _row_version + 1
+      WHERE lebtab_lmc = ? AND _row_version = ?`,
+    [...columns.map((column) => changes[column]), lmc, rowVersion],
+  );
+  return result.affectedRows;
+}
+
+/**
+ * #6 (docs/SPEC.md 5.2): schreibt alle 79 Naehrwerte, setzt lebtab_nutrition_stale = 0 und erhoeht _row_version —
+ * nur bei passender Version. Fehlt einer der 79 Schluessel, ist das ein Programmierfehler (nie stillschweigend NULL).
+ * @param {string} lmc
+ * @param {Record<string, number|null>} nutrition Ergebnis von calculateNutrition
+ * @param {number} rowVersion
+ * @param {import('mysql2/promise').PoolConnection} conn Transaktions-Connection
+ * @returns {Promise<number>} affectedRows: 1 = gespeichert, 0 = Produkt fehlt oder Version passt nicht
+ */
+export async function updateNutrition(lmc, nutrition, rowVersion, conn) {
+  const missing = NUTRITION_COLUMNS.filter((column) => nutrition[column] === undefined);
+  if (missing.length > 0) throw new TypeError(`lebtabModel.updateNutrition: fehlende Spalten ${missing.join(', ')}`);
+  const [result] = await conn.query(
+    `UPDATE lebtab SET ${NUTRITION_COLUMNS.map((column) => `${column} = ?`).join(', ')},
+        lebtab_nutrition_stale = 0, _row_version = _row_version + 1
+      WHERE lebtab_lmc = ? AND _row_version = ?`,
+    [...NUTRITION_COLUMNS.map((column) => nutrition[column]), lmc, rowVersion],
   );
   return result.affectedRows;
 }

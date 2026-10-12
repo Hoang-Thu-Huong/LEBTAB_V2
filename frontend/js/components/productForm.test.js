@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderProductForm, applyFormErrors } from './productForm.js';
-import { emptyProductForm } from '../utils/productForm.js';
+import { emptyProductForm, productToForm } from '../utils/productForm.js';
 import { PRODUCT_INFO_FIELDS } from '../utils/productFields.js';
 
 const ITEMARTS = ['A', 'L', 'M', 'N', 'R', 'S', 'V'];
@@ -84,6 +84,33 @@ describe('renderProductForm — events', () => {
     const { container, onChange } = render();
     container.oninput({ target: { closest: () => null } });
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('renderProductForm — edit.html (Phase 8, PUT #4)', () => {
+  const PRODUCT = {
+    lebtab_lmc: 'DQCO00', lebtab_Bezeich: 'Aufstrich', lebtab_Marke: null, lebtab_Version: 3, lebtab_Itemart: 'V',
+    lebtab_Datum: '2013-05-10', lebtab_aktuell: 1, lebtab_lmgruppe: 0, lebtab_gruppename: null, lebtab_source: null,
+    lebtab_source_code: null, lebtab_source_detail: null, lebtab_probiotisch: null,
+  };
+
+  it('draws the saved product (productToForm) with a readonly LMC; numbers incl. 0 are shown, null is empty', () => {
+    const { container } = render({ form: productToForm(PRODUCT), lmcReadonly: true });
+    const html = container.innerHTML;
+    expect(html).toMatch(/name="lebtab_lmc" value="DQCO00"[^>]*readonly/);
+    expect(html).toContain('name="lebtab_Version" value="3"');
+    expect(html).toContain('name="lebtab_lmgruppe" value="0"');
+    expect(html).toContain('name="lebtab_Marke" value=""');
+    expect(html).toContain('type="date" name="lebtab_Datum" value="2013-05-10"');
+  });
+
+  it('works without onLmcBlur (edit passes only onChange): leaving a field does not throw', () => {
+    const container = fakeContainer();
+    const onChange = vi.fn();
+    renderProductForm(container, { form: productToForm(PRODUCT), itemarts: ITEMARTS, lmcReadonly: true }, { onChange });
+    expect(() => container.onchange(eventOn({ name: 'lebtab_lmc', value: 'DQCO00' }))).not.toThrow();
+    container.oninput(eventOn({ name: 'lebtab_Marke', value: 'Alnatura' }));
+    expect(onChange).toHaveBeenCalledWith('lebtab_Marke', 'Alnatura');
   });
 });
 

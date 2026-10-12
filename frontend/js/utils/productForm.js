@@ -1,5 +1,6 @@
 /**
- * Reine Formular-Logik fuer "Neu anlegen" (docs/ARCHITECTURE.md 7.4) — ohne DOM, mit Unit-Tests.
+ * Reine Formular-Logik fuer "Neu anlegen" (docs/ARCHITECTURE.md 7.4) und das Stammdaten-Formular von edit.html
+ * (Phase 8, 7.5 Zweig A) — ohne DOM, mit Unit-Tests.
  * Der Formularzustand haelt ALLE Werte als Strings (so wie sie in den Eingabefeldern stehen);
  * erst buildCreatePayload wandelt sie in die Typen des API-Vertrags um (docs/SPEC.md 6.1 #3, 6.4).
  */
@@ -53,4 +54,47 @@ export function isFormDirty(form, ingredients, today) {
   if (ingredients.length > 0) return true;
   const initial = emptyProductForm(today);
   return PRODUCT_INFO_FIELDS.some((field) => String(form[field.key] ?? '').trim() !== initial[field.key]);
+}
+
+/**
+ * Formularzustand (Strings) aus einem Produkt von #2/#4: null -> '', Zahlen -> String (Phase 8, edit.html).
+ * @param {Record<string, unknown>} product
+ * @returns {Record<string, string>}
+ */
+export function productToForm(product) {
+  const form = {};
+  for (const field of PRODUCT_INFO_FIELDS) {
+    const value = product[field.key];
+    form[field.key] = value === null || value === undefined ? '' : String(value);
+  }
+  return form;
+}
+
+/**
+ * Body fuer PUT /api/products/:lmc aus dem Stammdaten-Formular (docs/ARCHITECTURE.md 7.5 Zweig A): die 12 Spalten
+ * OHNE lebtab_lmc (nur lesbar) und OHNE lebtab_bemerkung (wird auf detail.html gepflegt, docs/SPEC.md 5.10).
+ * Leeres Feld -> null ausdruecklich, weil PUT PATCH-Semantik hat (fehlender Schluessel = unveraendert).
+ * @param {Record<string, string>} form
+ * @param {number} rowVersion _row_version des geladenen Produkts
+ * @returns {Record<string, unknown>}
+ */
+export function buildUpdatePayload(form, rowVersion) {
+  const payload = {};
+  for (const field of PRODUCT_INFO_FIELDS) {
+    if (field.input !== 'lmc') payload[field.key] = toPayloadValue(field, form[field.key]);
+  }
+  payload._row_version = rowVersion;
+  return payload;
+}
+
+/**
+ * Weicht das Stammdaten-Formular vom gespeicherten Produkt ab? (Rueckfrage beim Verlassen von edit.html.)
+ * Vergleich nach trim — nur Leerzeichen am Rand gelten nicht als Aenderung.
+ * @param {Record<string, string>} form
+ * @param {Record<string, unknown>} product
+ * @returns {boolean}
+ */
+export function isInfoFormDirty(form, product) {
+  const saved = productToForm(product);
+  return PRODUCT_INFO_FIELDS.some((field) => String(form[field.key] ?? '').trim() !== saved[field.key].trim());
 }

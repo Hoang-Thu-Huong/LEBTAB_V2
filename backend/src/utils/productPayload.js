@@ -1,10 +1,12 @@
 import { AppError } from './AppError.js';
 import { ITEMARTS } from './itemarts.js';
-import { INGREDIENT_MAX_PER_PRODUCT, MENGE_MAX } from './limits.js';
+import { BEMERKUNG_MAX_LENGTH, INGREDIENT_MAX_PER_PRODUCT, MENGE_MAX } from './limits.js';
 import { LMC_PATTERN, isValidYmd } from './validators.js';
+import { UPDATABLE_COLUMNS } from './productColumns.js';
 
 /**
- * Handgeschriebene Validierung des Bodys von POST /api/products (docs/SPEC.md 6.4, 5.3, 5.4) — kein Joi/zod.
+ * Handgeschriebene Validierung der Bodys von POST /api/products (#3), PUT /api/products/:lmc (#4) und
+ * POST /api/products/:lmc/recalculate (#6) — docs/SPEC.md 6.4, 5.3, 5.4 — kein Joi/zod.
  * Sammelt ALLE Verstoesse und wirft dann einmal 400 VALIDATION_ERROR mit details[{field, issue}].
  * Naehrwertspalten, technische Spalten und unbekannte Schluessel werden ignoriert (nie aus req.body uebernommen).
  */
@@ -195,11 +197,7 @@ function readIngredients(body, lmc, details) {
  * @throws {AppError} 400 VALIDATION_ERROR mit allen Verstoessen
  */
 export function parseCreateProductBody(body) {
-  if (!isPlainObject(body)) {
-    throw new AppError(400, 'VALIDATION_ERROR', 'Ungültige Eingabedaten', [
-      { field: 'body', issue: 'muss ein JSON-Objekt sein' },
-    ]);
-  }
+  if (!isPlainObject(body)) throw bodyNotAnObject();
   const details = [];
   const lmc = readLmc(body, details);
   const product = {
@@ -223,4 +221,113 @@ export function parseCreateProductBody(body) {
     throw new AppError(400, 'VALIDATION_ERROR', 'Ungültige Eingabedaten', details);
   }
   return { product, ingredients };
+}
+
+/** Fingerabdruck einer Rezeptur aus #17 (docs/SPEC.md 6.1): SHA-1 hex, siehe utils/recipeFingerprint.js. */
+const RECIPE_VERSION_PATTERN = /^[0-9a-f]{40}$/;
+
+function bodyNotAnObject() {
+  return new AppError(400, 'VALIDATION_ERROR', 'Ungültige Eingabedaten', [
+    { field: 'body', issue: 'muss ein JSON-Objekt sein' },
+  ]);
+}
+
+/** _row_version: Pflicht bei #4 und #6 (docs/SPEC.md 5.6), ganze Zahl >= 1. */
+function readRowVersion(body, details) {
+  const raw = body._row_version;
+  if (raw === undefined || raw === null) {
+    details.push({ field: '_row_version', issue: 'fehlt' });
+    return null;
+  }
+  if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 1 || raw > INT_MAX) {
+    details.push({ field: '_row_version', issue: `muss eine ganze Zahl zwischen 1 und ${INT_MAX} sein` });
+    return null;
+  }
+  return raw;
+}
+
+/**
+ * lebtab_bemerkung (docs/SPEC.md 5.10): null oder Text <= 10.000 Zeichen. Leer nach trim() -> null,
+ * sonst unveraendert gespeichert (nicht getrimmt — Zeilenumbrueche am Anfang/Ende gehoeren zum Text).
+ */
+function readBemerkung(body, details) {
+  const raw = body.lebtab_bemerkung;
+  if (raw === null) return null;
+  if (typeof raw !== 'string') {
+    details.push({ field: 'lebtab_bemerkung', issue: ISSUE_TEXT });
+    return null;
+  }
+  if (raw.trim() === '') return null;
+  if (charLength(raw) > BEMERKUNG_MAX_LENGTH) {
+    details.push({ field: 'lebtab_bemerkung', issue: `darf höchstens ${BEMERKUNG_MAX_LENGTH} Zeichen haben` });
+    return null;
+  }
+  return raw;
+}
+
+/** Leser je Spalte der Whitelist von #4 — dieselben Regeln wie beim Anlegen (#3). */
+const UPDATE_READERS = Object.freeze({
+  lebtab_Version: (body, details) => readInt(body, 'lebtab_Version', details),
+  lebtab_Itemart: readItemart,
+  lebtab_Datum: readDatum,
+  lebtab_aktuell: readAktuell,
+  lebtab_lmgruppe: (body, details) => readInt(body, 'lebtab_lmgruppe', details),
+  lebtab_probiotisch: (body, details) => readInt(body, 'lebtab_probiotisch', details),
+  lebtab_bemerkung: readBemerkung,
+  ...Object.fromEntries(TEXT_FIELDS.map((spec) => [spec.key, (body, details) => readText(body, spec, details)])),
+});
+
+/**
+ * @typedef {{changes: Record<string, string|number|null>, _row_version: number}} UpdateProductInput
+ */
+
+/**
+ * Validiert den Body von PUT /api/products/:lmc (docs/SPEC.md 6.1 #4, 6.4) — PATCH-Semantik: nur Schluessel, die im
+ * Body VORHANDEN sind und zur Whitelist (13 Spalten) gehoeren, landen in changes; fehlende bleiben unveraendert.
+ * Explizites null loescht den Wert — ausser bei den 4 NOT-NULL-Spalten (400). lebtab_lmc, Naehrwerte, technische
+ * Spalten und unbekannte Schluessel werden ignoriert. Keine Spalte -> 400.
+ * @param {unknown} body
+ * @returns {UpdateProductInput}
+ * @throws {AppError} 400 VALIDATION_ERROR mit allen Verstoessen
+ */
+export function parseUpdateProductBody(body) {
+  if (!isPlainObject(body)) throw bodyNotAnObject();
+  const details = [];
+  const rowVersion = readRowVersion(body, details);
+  const changes = {};
+  for (const column of UPDATABLE_COLUMNS) {
+    if (Object.hasOwn(body, column)) changes[column] = UPDATE_READERS[column](body, details);
+  }
+  if (Object.keys(changes).length === 0) {
+    details.push({ field: 'body', issue: 'enthält keine änderbare Spalte' });
+  }
+  if (details.length > 0) {
+    throw new AppError(400, 'VALIDATION_ERROR', 'Ungültige Eingabedaten', details);
+  }
+  return { changes, _row_version: rowVersion };
+}
+
+/**
+ * Validiert den Body von POST /api/products/:lmc/recalculate (docs/SPEC.md 6.1 #6): _row_version Pflicht;
+ * recipeVersion optional (aus der Vorschau #17) — fehlt er, prueft der Server die Rezeptur nicht gegen die Vorschau.
+ * @param {unknown} body
+ * @returns {{_row_version: number, recipeVersion: string|null}}
+ * @throws {AppError} 400 VALIDATION_ERROR
+ */
+export function parseRecalculateBody(body) {
+  if (!isPlainObject(body)) throw bodyNotAnObject();
+  const details = [];
+  const rowVersion = readRowVersion(body, details);
+  let recipeVersion = null;
+  if (body.recipeVersion !== undefined && body.recipeVersion !== null) {
+    if (typeof body.recipeVersion === 'string' && RECIPE_VERSION_PATTERN.test(body.recipeVersion)) {
+      recipeVersion = body.recipeVersion;
+    } else {
+      details.push({ field: 'recipeVersion', issue: 'ungültiger Rezeptur-Stand' });
+    }
+  }
+  if (details.length > 0) {
+    throw new AppError(400, 'VALIDATION_ERROR', 'Ungültige Eingabedaten', details);
+  }
+  return { _row_version: rowVersion, recipeVersion };
 }

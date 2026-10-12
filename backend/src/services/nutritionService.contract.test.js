@@ -22,13 +22,15 @@ const TOLERANCE = 1e-9;
 const EXCLUDED_COLUMNS = new Set(['lebtab_E_CAL']);
 
 // "Saubere" Produkte: existieren in lebtab, keine A-Zeile, kein unbekannter LM_Zutat, Summe Menge = 100 g,
-// Rezeptur nicht dupliziert. Gleiche Kriterien wie scripts/check-golden.sql. Nur SELECT.
+// Rezeptur nicht dupliziert, Naehrwerte nicht als veraltet markiert (stale = 0, Phase 8: nach einer Rezepturaenderung
+// passen die gespeicherten Werte absichtlich nicht mehr). Gleiche Kriterien wie scripts/check-golden.sql. Nur SELECT.
 const CANDIDATES_SQL = `
   SELECT z.LMC AS lmc
     FROM c_zutab z
     JOIN lebtab p ON p.lebtab_lmc = z.LMC
     LEFT JOIN lebtab l ON l.lebtab_lmc = z.LM_Zutat
-   WHERE z.LMC NOT IN (
+   WHERE p.lebtab_nutrition_stale = 0
+     AND z.LMC NOT IN (
            SELECT LMC FROM (
              SELECT LMC FROM (SELECT LMC, LM_Zutat, Menge, COUNT(*) AS n FROM c_zutab GROUP BY LMC, LM_Zutat, Menge) y
               GROUP BY LMC HAVING MIN(n) >= 2 AND MIN(n) = MAX(n)

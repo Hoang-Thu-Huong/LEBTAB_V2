@@ -55,8 +55,10 @@ export const api = {
   createProduct: (payload) => request('POST', '/products', payload),
   updateProduct: (lmc, payload) => request('PUT', `/products/${enc(lmc)}`, payload),
   deleteProduct: (lmc) => request('DELETE', `/products/${enc(lmc)}`),
-  recalculate: (lmc, rowVersion) =>
-    request('POST', `/products/${enc(lmc)}/recalculate`, { _row_version: rowVersion }),
+  // #17 Vorschau (schreibt nie) und #6 Speichern; recipeVersion aus der Vorschau (Phase 8, docs/SPEC.md 5.9)
+  previewRecalculation: (lmc) => request('GET', `/products/${enc(lmc)}/recalculation`),
+  recalculate: (lmc, rowVersion, recipeVersion) =>
+    request('POST', `/products/${enc(lmc)}/recalculate`, { _row_version: rowVersion, recipeVersion }),
   addIngredient: (lmc, payload) => request('POST', `/products/${enc(lmc)}/ingredients`, payload),
   updateIngredient: (lmc, id, payload) =>
     request('PUT', `/products/${enc(lmc)}/ingredients/${id}`, payload),

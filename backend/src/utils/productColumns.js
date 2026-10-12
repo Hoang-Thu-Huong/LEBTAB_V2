@@ -35,3 +35,13 @@ export const TECHNICAL_DEFAULTS = Object.freeze({
   lebtab_nutrition_stale: 0,
   lebtab_bemerkung: null,
 });
+
+/**
+ * Whitelist von PUT #4 (docs/SPEC.md 6.1 #4): 6 Basisspalten ohne lebtab_lmc + 6 Klassifikation + lebtab_bemerkung = 13.
+ * Nur diese Spalten darf ein UPDATE ueber die API setzen — Naehrwerte nur #6, _row_version/stale nur der Server.
+ */
+export const UPDATABLE_COLUMNS = Object.freeze([
+  ...BASIC_COLUMNS.filter((column) => column !== 'lebtab_lmc'),
+  ...CLASSIFICATION_COLUMNS,
+  'lebtab_bemerkung',
+]);

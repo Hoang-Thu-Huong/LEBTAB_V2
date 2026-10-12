@@ -4,6 +4,7 @@ import {
   CLASSIFICATION_COLUMNS,
   TECHNICAL_COLUMNS,
   TECHNICAL_DEFAULTS,
+  UPDATABLE_COLUMNS,
 } from './productColumns.js';
 
 describe('productColumns', () => {
@@ -31,5 +32,17 @@ describe('productColumns', () => {
       lebtab_nutrition_stale: 0,
       lebtab_bemerkung: null,
     });
+  });
+
+  it('UPDATABLE_COLUMNS = 13 columns of PUT #4: no lmc, no nutrition, only lebtab_bemerkung of the technical ones', () => {
+    expect(UPDATABLE_COLUMNS).toHaveLength(13);
+    expect(UPDATABLE_COLUMNS).not.toContain('lebtab_lmc');
+    expect(UPDATABLE_COLUMNS).toEqual([
+      ...BASIC_COLUMNS.slice(1),
+      ...CLASSIFICATION_COLUMNS,
+      'lebtab_bemerkung',
+    ]);
+    expect(UPDATABLE_COLUMNS).not.toContain('_row_version');
+    expect(UPDATABLE_COLUMNS).not.toContain('lebtab_nutrition_stale');
   });
 });

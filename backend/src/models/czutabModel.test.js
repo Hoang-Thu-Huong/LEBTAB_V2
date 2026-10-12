@@ -3,6 +3,7 @@ import {
   findByLmcWithZutat,
   findByIdWithZutat,
   findByIdForUpdate,
+  lockByLmc,
   findByLmcAndZutat,
   countByLmc,
   findColumnNames,
@@ -133,5 +134,13 @@ describe('czutabModel — Phase 7 (#7, #8, #9)', () => {
     expect(conn.query.mock.calls[0]).toEqual(['UPDATE c_zutab SET Menge = ? WHERE id = ?', [40, 7]]);
     expect(await deleteById(7, conn)).toBe(1);
     expect(conn.query.mock.calls[1]).toEqual(['DELETE FROM c_zutab WHERE id = ?', [7]]);
+  });
+});
+
+describe('czutabModel.lockByLmc (Phase 8)', () => {
+  it('locks all rows of the product by LMC with FOR UPDATE, selects only id (no JOIN), returns the count', async () => {
+    const conn = { query: vi.fn().mockResolvedValue([[{ id: 1 }, { id: 2 }]]) };
+    expect(await lockByLmc('DQCO00', conn)).toBe(2);
+    expect(conn.query).toHaveBeenCalledWith('SELECT id FROM c_zutab WHERE LMC = ? FOR UPDATE', ['DQCO00']);
   });
 });

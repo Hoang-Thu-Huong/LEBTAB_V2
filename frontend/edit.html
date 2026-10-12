@@ -24,12 +24,19 @@
       <section class="card">
         <h3 class="card__title">Stammdaten</h3>
         <div id="info"></div>
-        <p class="note muted">Stammdaten können hier noch nicht bearbeitet werden.</p>
       </section>
       <section class="card">
         <h3 class="card__title">Zutaten</h3>
         <p class="note muted">Änderungen an der Rezeptur werden sofort gespeichert. Die Nährwerte werden dabei nicht neu berechnet.</p>
         <div id="editor"></div>
+      </section>
+      <section class="card">
+        <div class="card__head">
+          <h3 class="card__title">Nährwerte pro 100 g</h3>
+          <button type="button" id="btn-recalc" class="btn">Neu berechnen &amp; speichern</button>
+        </div>
+        <div id="nutrition-message" class="message" hidden></div>
+        <div id="nutrition"></div>
       </section>
     </div>
   </main>

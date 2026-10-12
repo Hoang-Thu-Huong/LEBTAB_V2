@@ -109,7 +109,7 @@ a { color: var(--color-primary); }
 .dialog::backdrop, .lightbox::backdrop { background: rgba(0, 0, 0, 0.5); }
 .dialog__form { margin: 0; }
 .dialog__title { margin: 0 0 var(--space-3); font-size: 16px; }
-.dialog__line { margin: 0 0 var(--space-2); overflow-wrap: anywhere; }
+.dialog__line { margin: 0 0 var(--space-2); overflow-wrap: anywhere; white-space: pre-wrap; }
 .dialog__actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
 
 .lightbox { max-width: 95vw; max-height: 95vh; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius); }
@@ -144,3 +144,15 @@ a { color: var(--color-primary); }
 .pending { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); padding: var(--space-3); margin-bottom: var(--space-3); background: var(--color-bg); border: 1px dashed var(--color-border); border-radius: var(--radius); }
 .pending__name { flex: 1 1 200px; }
 .pending__field { flex: 0 0 auto; }
+
+/* Phase 8: Stammdaten + Neu berechnen auf edit.html, Bemerkung auf detail.html (docs/ARCHITECTURE.md 7.3, 7.5) */
+.card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+.card__head .card__title { margin: 0; }
+.info-form__actions { margin: var(--space-4) 0 0; }
+.dialog:has(.dialog__scroll) { max-width: 640px; }
+.dialog__line--warn { color: var(--color-danger); font-weight: 700; }
+.dialog__scroll { max-height: 40vh; overflow: auto; margin: 0 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.dialog__table { width: 100%; }
+.dialog__table thead th { position: sticky; top: 0; background: var(--color-surface); }
+.bemerkung__text { width: 100%; min-height: 6em; resize: vertical; font: inherit; box-sizing: border-box; }
+.bemerkung__actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-2); }

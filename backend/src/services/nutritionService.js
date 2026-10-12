@@ -1,10 +1,13 @@
 /**
- * Naehrwertberechnung nach docs/SPEC.md 5.1. In Phase 3 nur calculateNutrition (liest, schreibt nie);
- * recalculateNutrition (schreibt die 79 Spalten) folgt in Phase 8.
+ * Naehrwertberechnung nach docs/SPEC.md 5.1: calculateNutrition (liest, schreibt nie) und recalculateNutrition
+ * (Phase 8, schreibt die 79 Spalten — nur fuer #6).
  * NICHT aus ingredientService importieren — Zutaten-Endpunkte berechnen nie neu (docs/SPEC.md 5.2).
  */
 import { NUTRITION_COLUMNS } from '../utils/nutritionColumns.js';
+import { recipeChanged } from '../utils/productErrors.js';
+import { recipeFingerprint } from '../utils/recipeFingerprint.js';
 import * as lebtabModel from '../models/lebtabModel.js';
+import * as czutabModel from '../models/czutabModel.js';
 
 /** Itemart der Zusatz-Codes (Vitamine, Mineralstoffe ...): ihre lebtab-Zeile ist ein Marker-Vektor (DECISIONS #46). */
 const ZUSATZ_ITEMART = 'A';
@@ -137,4 +140,25 @@ export async function calculateNutrition(ingredients, conn) {
   let zusatzCount = 0;
   for (const group of zusatzRows.values()) zusatzCount += group.length;
   return { nutrition, warnings, contributingRows: regularCount + zusatzCount };
+}
+
+/**
+ * #6 (docs/SPEC.md 5.2): liest die Rezeptur aus c_zutab (Zeilen vorher gesperrt), prueft optional den Stand aus der
+ * Vorschau #17, berechnet und schreibt die 79 Werte + stale = 0 + _row_version + 1 in EINEM UPDATE mit Versionspruefung.
+ * Laeuft in der Transaktion des Aufrufers; updated === false heisst: Produkt fehlt oder _row_version passt nicht —
+ * der Aufrufer rollt zurueck und meldet 404/409.
+ * @param {string} lmc Schreibweise in der DB
+ * @param {number} rowVersion Stand des Clients
+ * @param {import('mysql2/promise').PoolConnection} conn Transaktions-Connection
+ * @param {{recipeVersion?: string|null}} [options] recipeVersion aus #17; null/fehlend = nicht pruefen
+ * @returns {Promise<NutritionResult & {ingredients: import('../models/czutabModel.js').IngredientRow[], updated: boolean}>}
+ * @throws {AppError} 409 RECIPE_CHANGED
+ */
+export async function recalculateNutrition(lmc, rowVersion, conn, { recipeVersion = null } = {}) {
+  await czutabModel.lockByLmc(lmc, conn);
+  const ingredients = await czutabModel.findByLmcWithZutat(lmc, conn);
+  if (recipeVersion !== null && recipeFingerprint(ingredients) !== recipeVersion) throw recipeChanged();
+  const result = await calculateNutrition(ingredients, conn);
+  const affected = await lebtabModel.updateNutrition(lmc, result.nutrition, rowVersion, conn);
+  return { ...result, ingredients, updated: affected === 1 };
 }
